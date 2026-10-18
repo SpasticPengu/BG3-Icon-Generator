@@ -1272,6 +1272,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
+    def send_head(self):
+        """304 only when the file's date equals the browser's copy's. The stdlib answers 304 for any file not newer: a new
+        version unzipped by Explorer keeps the zip's (build) dates, older than an earlier version's files at the same
+        address, and the page ran the old editor.js (user 2026-10-19)"""
+        ims = self.headers.get("If-Modified-Since")
+        if ims:
+            try:
+                same = ims == self.date_time_string(os.stat(self.translate_path(self.path)).st_mtime)
+            except OSError:
+                same = False
+            if not same:
+                del self.headers["If-Modified-Since"]
+        return super().send_head()
+
     def send_json(self, obj, code=200):
         b = json.dumps(obj).encode()
         self.send_response(code)

@@ -1854,6 +1854,13 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: user saw raw markdown in 0.7.3's Update dialog: the page ran a cached 0.7.2 editor.js. The stdlib file
+  server answers 304 for any file not newer than the browser's copy; Explorer keeps the zip's build dates when
+  unzipping, older than the 0.7.2 files the browser cached at the same address. `Handler.send_head` now answers 304
+  only when the dates are equal (checked with curl: same date 304, later / earlier 200, data files still 304). In-app
+  updates were not affected (extracted files get the current time). Ctrl+F5 fixes an affected page.
+- 2026-10-19: **v0.7.4 published** (user): `main` = 1150d11, tag v0.7.4, workflow passed, notes (Bug Fixes / Features
+  / Installation) set; the permanent download link serves it.
 - 2026-10-19: first-start console text (user: too informal and confusing): a "first-time setup" header and numbered
   steps ([1/3] setup tool, [2/3] Python 3.12 + packages, [3/3] game icons, "of about 100 MB" progress; real archive 102
   MB), "Setup complete: 3,524 files downloaded and verified.", then "BG3 Icon Generator X is running at URL" + how to
