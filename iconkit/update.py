@@ -90,6 +90,8 @@ def check(root=ROOT, feed=None, force=False):
             rel = {}
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps(rel), encoding="utf-8")
+    if not str(rel.get("tag_name", "")).startswith("v"):  # only app releases (v<version>): GitHub calls a lone data-v<N>
+        rel = {}                                           # release "latest" even when it is marked otherwise
     assets = {a["name"]: a for a in rel.get("assets", [])}
     z = next((a for n, a in assets.items() if n.endswith(".zip")), None)
     latest = rel.get("tag_name", "").lstrip("vV")

@@ -159,8 +159,12 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   `requirements.in`, recompile the lock (command in its header), rerun `update test`. Keep `Start.bat` CRLF (edit it
   with Python or Write, not `sed`, which drops the CRs; `update test` checks). Test the launcher from PowerShell with
   `cmd.exe /c .\Start.bat --no-browser --drafts DIR`; stop its python afterwards (port 8765).
-  Repository: `SpasticPengu/BG3-Icon-Generator` (public). Never commit images made from Larian art (review sheets,
-  grids): `research/findings/*.png` is ignored; the old history still holds six, so never push an existing branch as is.
+  Repository: `SpasticPengu/BG3-Icon-Generator` (public). **Commit here as SpasticPengu (repo config) in UTC: `TZ=UTC git
+  commit ...`** (overrides the global real-name identity; user 2026-10-19). Branch `public` tracks `origin/main`; every
+  older branch has the user's name and +11:00 dates: never push them. Publish (only when the user asks): run the
+  personal-strings check from memory `public-repo-identity` (its terms stay out of the repo) and find nothing, then
+  `TZ=UTC git commit-tree <work-branch>^{tree} -p public -m "..."`, `git branch -f public <sha>`, and push with
+  `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin public:main`.
   Game data release: `python -m iconkit.update data OUT` (needs the game unpack) → upload the zip + .sha256 to a GitHub
   release tagged `data-v<DATA_VERSION>`; bump `iconkit.DATA_VERSION` when installed copies must download it again.
   Test an install: unzip the code release into an empty folder, `ICONGEN_DATA_URL=<file URL of the data zip>`, Start.bat.

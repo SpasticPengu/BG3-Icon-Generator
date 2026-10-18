@@ -4,14 +4,12 @@
 > copy pass, browser translation, sharp big exports, vector strokes at 2048, updates D48; see Phase 7, 7.0i). **The
 > launcher is built (8.1, 2026-10-19)**: `Start.bat` / `start.sh` / `Start.command` set up `.runtime/` and restart after an
 > in-app update; tested here from nothing and through a restart. **Releases go on GitHub**:
-> `SpasticPengu/BG3-Icon-Generator` (public, empty; `REPO` set, remote `origin` added, nothing pushed). **D10 amended
-> (user): the icons ship** as a separate download (`data-v1` release: `python -m iconkit.update data OUT`, 102 MB, upload
-> it and its .sha256 by hand) and the review PNGs stay in git; tested end to end from a fresh unzip. **Before the first
-> push** (only when the user asks; user 2026-10-19: no personal metadata): tracked files, images and the data zip are
-> clean (383746e: no personal paths, no image text / EXIF chunks). Still personal: **every existing commit** carries the
-> user's full name as author (noreply email), the +11:00 time zone, and old versions of files with their home-folder
-> paths, so the public history must be new (e.g. one snapshot commit as `SpasticPengu` in UTC); the user decides that
-> and the identity of later commits. Then the first releases: `data-v1` (by hand) and a `v<version>` tag (8.1b). Still before a public release: 8.3 (extract from the user's own
+> **Published 2026-10-19 (user):** `main` on `SpasticPengu/BG3-Icon-Generator` is one fresh commit (088cfab, the
+> `phase-7-editor` tree, as SpasticPengu with the noreply email in UTC); local branch `public` tracks it. The `data-v1`
+> release holds the icons download (102 MB, checked live: the app downloads and verifies it). The older branches keep
+> the user's name and +11:00 dates: never push them. From now on commits here are SpasticPengu in UTC (repo config +
+> `TZ=UTC`). Publishing later work: snapshot the work branch's tree onto `public` (CLAUDE.md), push only when asked.
+> No app release yet: the first is a `v0.7.0` tag (workflow, 8.1b) when the user asks. Still before a public release: 8.3 (extract from the user's own
 > BG3 install; the editor's first run needs `data/` from the Multitool unpack today), 8.4 (README, licences). **Later, user 2026-10-19 ("we'll come back to this"):
 > vector conversion edge cases**: a crescent outline whose tip test misses (1 of 4 synthetic crescents still traces as
 > two arcs capped side by side; the acute-angle / spur limits in `vectorize.js` were tuned on Moonbeam only), and how
@@ -1853,6 +1851,9 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: published (user): `main` = one snapshot commit 088cfab as SpasticPengu in UTC (no personal strings,
+  78 files); `data-v1` release uploaded and downloaded back by the app (3,524 files, SHA-256 checked); the update check
+  now only counts `v<version>` releases (GitHub reported the lone `data-v1` as latest). Repo identity SpasticPengu + UTC.
 - 2026-10-19: D10 amended (user): the icons ship as a `data-v1` download (`update.build_data` / `fetch_data`, checked
   against its SHA-256; hotbar backgrounds included, `paths.BACKGROUNDS` falls back to `data/backgrounds`), `NOTICE.md`,
   review PNGs back in git. Fresh-unzip test: launcher set up the runtime, downloaded and unpacked the icons, editor up,
