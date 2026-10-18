@@ -178,6 +178,10 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   install: `git archive --format=zip --prefix=x/ data-v1 > d.zip`, `ICONGEN_DATA_URL=<file URL of d.zip>`, Start.bat.
   Releases (D48, GitHub): bump `iconkit/__init__.py` `__version__`, commit, tag `v<version>`, push the tag (only when
   the user asks): `.github/workflows/release.yml` tests, builds and publishes. `update.REPO` = the GitHub repository.
+  Release notes (user 2026-10-19): formal, in `### Bug Fixes` / `### Features` / `### Performance Improvements` (only
+  the sections with entries) + `### Installation`; set with `gh release edit vX --notes-file` once the workflow is done.
+  The in-app Update dialog renders them (`notesInto`: headings, bullets, text only). The zip is `BG3-Icon-Generator.zip`
+  (no version: Windows names the unzipped folder after it; the updater takes any `.zip` asset).
   Updates (D48): `iconkit/update.py` (`python -m iconkit.update test | build OUT | check | apply | rollback`), version in
   `iconkit/__init__.py`; `update.REPO` empty = no checks until hosting is chosen; a git checkout never self-updates.
   Test the page's update flow with `ICONGEN_UPDATE_FEED=<local releases/latest JSON>` and delete `outputs/update/` after.

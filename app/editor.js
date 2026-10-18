@@ -2397,10 +2397,26 @@ $("#updBtn").onclick = () => {
   if (!UPD) return;
   $("#updTitle").textContent = UPD.latest ? `Version ${UPD.latest} is available` : "Update ready";
   $("#updText").textContent = `You have version ${UPD.version}.`;
-  $("#updNotes").textContent = UPD.notes || "";
+  notesInto($("#updNotes"), UPD.notes || "");
   $("#updGo").disabled = false;
   $("#updateDlg").showModal();
 };
+// release notes are GitHub markdown: headings, bullets and paragraphs as elements, text only (never innerHTML: the
+// notes come from the internet), bold / code / link marks dropped
+function notesInto(el, md) {
+  const plain = s => s.replace(/\*\*|`/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  const make = (tag, text) => Object.assign(document.createElement(tag), {textContent: plain(text)});
+  const out = [];
+  for (const line of md.split(/\r?\n/)) {
+    const h = /^#{1,6}\s+(.*)/.exec(line), li = /^\s*[-*]\s+(.*)/.exec(line);
+    if (li) {
+      if (out.at(-1)?.tagName !== "UL") out.push(document.createElement("ul"));
+      out.at(-1).append(make("li", li[1]));
+    } else if (h) out.push(make("h4", h[1]));
+    else if (line.trim()) out.push(make("p", line));
+  }
+  el.replaceChildren(...out);
+}
 $("#updLater").onclick = () => $("#updateDlg").close();
 $("#verTag").onclick = () => UPD?.newer || UPD?.staged ? $("#updBtn").click() : $("#help").showModal();
 $("#updGo").onclick = async () => {

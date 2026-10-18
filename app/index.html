@@ -129,8 +129,10 @@ aside { background: var(--panel); min-height: 0; overflow: auto; }
 .dtab.unsaved:hover .x, .dtab.unsaved .x:focus-visible { font-size: 15px; } .dtab.unsaved:hover .x::after, .dtab.unsaved .x:focus-visible::after { content: none; }
 .dren { width: 130px; height: 21px; padding: 0 4px; background: var(--panel2); border: 1px solid var(--accent); border-radius: 4px; }
 #updBtn { border-color: var(--accent); color: var(--accent2); }
-#updateDlg { width: min(520px, 92vw); } #updNotes { max-height: 40vh; overflow: auto; white-space: pre-wrap; margin: 6px 0 0; padding: 8px 10px;
+#updateDlg { width: min(520px, 92vw); } #updNotes { max-height: 40vh; overflow: auto; margin: 6px 0 0; padding: 8px 10px;
   background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r); font-size: 12.5px; } #updNotes:empty { display: none; }
+#updNotes h4 { margin: 8px 0 4px; font-size: 12.5px; } #updNotes h4:first-child { margin-top: 0; }
+#updNotes p { margin: 6px 0; } #updNotes ul { margin: 0; padding-left: 18px; } #updNotes li { margin: 2px 0; }
 #unsavedDlg { width: min(420px, 92vw); } #usList { max-height: 40vh; overflow: auto; margin-top: 6px; }
 .dnew { width: 27px; height: 27px; flex: none; border: 0; border-radius: 6px 6px 0 0; background: transparent; color: var(--dim); font-size: 18px; cursor: pointer; }
 .dnew:hover { background: var(--panel); color: var(--text); }

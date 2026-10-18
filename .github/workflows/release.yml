@@ -1,6 +1,7 @@
 # A release (D48): push a tag that matches iconkit.__version__ (e.g. v0.7.1) and this checks the updater, builds the zip
 # (the app's code + manifest.json) with its .sha256, and publishes both as a GitHub release, which the app's updater
-# finds (iconkit/update.py REPO). Notes: the release text is generated from the commits; edit it on GitHub if needed.
+# finds (iconkit/update.py REPO). Notes: generated from the commits, then replaced (gh release edit --notes-file) with
+# the Bug Fixes / Features / Performance Improvements notes the in-app Update dialog shows.
 name: release
 on:
   push:

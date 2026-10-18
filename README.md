@@ -46,8 +46,9 @@ Plus tabs for several icons at once, drafts, autosave, full undo, and keyboard s
 
 Windows 10 or 11. (macOS and Linux start scripts are included but haven't been tested yet.)
 
-1. Download `bg3-icon-generator-<version>.zip` from the
-   [latest release](https://github.com/SpasticPengu/BG3-Icon-Generator/releases/latest) and unzip it anywhere.
+1. Download [`BG3-Icon-Generator.zip`](https://github.com/SpasticPengu/BG3-Icon-Generator/releases/latest/download/BG3-Icon-Generator.zip)
+   (always the newest version; release notes on the [releases page](https://github.com/SpasticPengu/BG3-Icon-Generator/releases/latest))
+   and unzip it anywhere.
 2. Double-click **`Start.bat`**. On macOS use `Start.command`, on Linux `./start.sh`.
 
 The first start takes a few minutes and needs the internet once. It sets up its own copy of Python in a `.runtime`

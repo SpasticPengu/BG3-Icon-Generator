@@ -218,12 +218,14 @@ def rollback(root=ROOT, bak=None):
 
 
 def build(out, root=ROOT):
-    """manifest.json + bg3-icon-generator-<version>.zip + .sha256 into out -> the zip"""
+    """manifest.json + BG3-Icon-Generator.zip + .sha256 into out -> the zip. No version in the name: Windows names the
+    unzipped folder after the zip, and an update would leave it saying the old version (user 2026-10-19; the updater
+    takes any .zip asset, so older installs still find it)"""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     files = shipped(root)
     m = {"version": __version__, "files": {p: sha(root / p) for p in files}}
-    zp = out / f"bg3-icon-generator-{__version__}.zip"
+    zp = out / "BG3-Icon-Generator.zip"
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
         for p in files:
             if p.endswith((".sh", ".command")):     # executable on macOS / Linux (Windows has no x bit to copy)

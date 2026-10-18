@@ -1854,6 +1854,15 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: release notes (user: more formal, sections): v0.7.2 and v0.7.1 rewritten on GitHub as Bug Fixes /
+  Features (+ Installation; empty sections left out); the Update dialog renders them (`notesInto`, elements built from
+  text, never innerHTML). Zip renamed `BG3-Icon-Generator.zip` (user: the unzipped folder kept the old version after an
+  update; Windows names it after the zip). Older installs still update (the updater takes any `.zip` asset). Takes
+  effect from the next release; v0.7.2's asset still has the old name. update test passes.
+- 2026-10-19: **v0.7.2 published** (user): `main` = c0a97ac (snapshot of `phase-7-editor`, personal-strings check
+  clean), tag v0.7.2, workflow built and released it (zip 544 KB + .sha256, `iconkit/launch.py` inside), notes set
+  from the scratchpad (the four update-test fixes). Copies on 0.7.0 / 0.7.1 update to it with the old launcher's loop;
+  the next start uses the new Start.bat.
 - 2026-10-19: user's update test (0.7.0 → 0.7.1) notes fixed: (1) the check cached GitHub's answer 6 h, so a release
   published after the first start showed only after toggling checks: now one request per start / toggle (60 an hour
   allowed; an ETag try saved nothing, unauthenticated 304s still count). (2) An update restart opened a second browser
