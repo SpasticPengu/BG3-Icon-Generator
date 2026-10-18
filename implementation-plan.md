@@ -9,7 +9,10 @@
 > release holds the icons download (102 MB, checked live: the app downloads and verifies it). The older branches keep
 > the user's name and +11:00 dates: never push them. From now on commits here are SpasticPengu in UTC (repo config +
 > `TZ=UTC`). Publishing later work: snapshot the work branch's tree onto `public` (CLAUDE.md), push only when asked.
-> No app release yet: the first is a `v0.7.0` tag (workflow, 8.1b) when the user asks. Still before a public release: 8.3 (extract from the user's own
+> Repository set up (user, 2026-10-19): README, description, topics, wiki / projects off, branches deleted on merge,
+> Dependabot alerts + security fixes, private vulnerability reporting (secret scanning was on). `main` = cfcdbcf.
+> Open for the user: **a licence** (none yet: the code is all rights reserved until one is added; 8.4), an optional
+> social preview image (Settings, web only), and the first app release (`v0.7.0` tag, workflow 8.1b) when asked. Still before a public release: 8.3 (extract from the user's own
 > BG3 install; the editor's first run needs `data/` from the Multitool unpack today), 8.4 (README, licences). **Later, user 2026-10-19 ("we'll come back to this"):
 > vector conversion edge cases**: a crescent outline whose tip test misses (1 of 4 synthetic crescents still traces as
 > two arcs capped side by side; the acute-angle / spur limits in `vectorize.js` were tuned on Moonbeam only), and how
@@ -1851,6 +1854,9 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: repository set up (user): README.md (features, install, exports in a mod, developers, credits),
+  description + 6 topics, wiki / projects off, delete branch on merge, Dependabot alerts + security fixes, private
+  vulnerability reporting; pushed as cfcdbcf (with the update-check guard). No licence yet (user's call).
 - 2026-10-19: published (user): `main` = one snapshot commit 088cfab as SpasticPengu in UTC (no personal strings,
   78 files); `data-v1` release uploaded and downloaded back by the app (3,524 files, SHA-256 checked); the update check
   now only counts `v<version>` releases (GitHub reported the lone `data-v1` as latest). Repo identity SpasticPengu + UTC.

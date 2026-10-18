@@ -1,61 +1,96 @@
 # BG3 Icon Generator
 
-A free, local app for making **Baldur's Gate 3 spell, action and illithid power icons** that look like the game's own,
-and for turning them into everything a mod needs.
+**Make spell and action icons for your Baldur's Gate 3 mods that look like they shipped with the game.**
 
-You draw with the game's real strokes and shapes, colour the icon with the game's own colour gradients and glow, and
-export it once: the app builds the controller, tooltip and PC hotbar versions, the DDS textures and the mod files.
+![The editor with a new icon built from the game's own parts](docs/images/editor.png)
 
-> Unofficial fan tool. Not made, approved or endorsed by Larian Studios or Wizards of the Coast. See [NOTICE.md](NOTICE.md).
+New spells tend to give themselves away with their icon: a recoloured vanilla one, or art in a different style from
+everything around it on the hotbar. This app builds icons out of the game's own strokes, colours them with the game's
+own gradients and glow, and exports every file the game needs in one go.
 
-## What it does
+It's free, it runs on your own PC, and you don't need to know Photoshop or how BG3's texture atlases work.
 
-- **An editor built on the game's art.** Open any of the game's ~1,100 spell, action and illithid power icons, or add
-  its parts (damage-type symbols, figures, frames, rays and more) from the Shapes library. Move, scale, rotate, flip,
-  group, align and erase them, or draw your own strokes with a brush that matches the game's edge, taper and thorns.
-- **The game's colours.** 31 colour gradients measured from the game's icons, picked automatically from the spell's kind,
-  intent and damage type, plus your own colours or gradients.
-- **Live previews** of the controller icon, the PC hotbar slot and the tooltip, on the backgrounds the game uses.
-- **Export for your mod.** Hotbar atlas DDS, tooltip and controller textures, TextureBank and atlas metadata, ready to
-  drop into a mod. Also PNG or WebP images up to 2048 px (sharp at large sizes) for mod pages.
-- **Bring your own icons.** Import a mod's existing icons in bulk, including faded tooltip icons (the faded strokes are
-  rebuilt), to edit and export them again under their original names.
-- **Several icons at once** in tabs, exported together.
-- **Updates itself** from this repository's releases (it asks first).
-- **Other languages:** the app works with your browser's built-in page translation.
+## What you can do with it
 
-## Install
+**Start from any game icon.** All 1,094 spell, action and illithid power icons are in the library. Open Fireball, take
+the flame out, put something else in.
 
-Windows 10 or 11. (macOS and Linux launchers are included but not tested yet.)
+**Build from parts.** 144 pieces cut from the game's icons: the 11 damage-type symbols, hands, figures, creatures,
+skulls, weapons, frames, rings, rays and more. Drag them in, scale, rotate, flip, group and line them up.
 
-1. Download the latest app release (`bg3-icon-generator-<version>.zip`) from
-   [Releases](https://github.com/SpasticPengu/BG3-Icon-Generator/releases) and unzip it anywhere.
-2. Double-click **`Start.bat`** (macOS: `Start.command`, Linux: `./start.sh`).
+**Draw your own strokes.** The brush, line, ellipse and pen tools draw in the game's line style, with the same uneven
+edges, tapered ends and thorny barbs (spell icons are thornier than action icons, and the brush knows that). Any game
+stroke can be made smoother or thornier too.
 
-The first start needs the internet once and takes a few minutes. It sets up the app's own Python and libraries in a
-`.runtime` folder next to it (nothing is installed elsewhere and no admin rights are needed), then downloads the game's
-icons (about 110 MB). In all, about 420 MB on disk. The editor then opens in your browser.
+**Colour it the way the game does.** 31 colour gradients measured from the game's icons. The app picks one from the
+spell's damage type and intent, or you choose. You can also make your own colour or gradient:
 
-Each start checks the libraries, and the app offers updates when a new release is out. To remove it, delete the folder.
+![Making a custom gradient](docs/images/colour.png)
 
-## Using exported icons in a mod
+**See it in game before you build.** Live previews of the controller icon, the tooltip art and the PC hotbar slot. One
+drawing gives you all three:
 
-Exports go to `outputs/editor/<mod name>/`:
+![One drawing in every form the game uses](docs/images/versions.png)
 
-- `mod/` holds the game files (the hotbar atlas and its metadata, tooltip and controller textures, TextureBank). Copy
-  them into your mod's folder.
-- The icon's **Name in the game** (in the Spell panel) is the name your spells refer to in their `Icon` field.
-- `png/` holds the same icon as images for your mod page.
+**Export once.** The hotbar atlas DDS and its atlas file, tooltip and controller textures (with their low-res copies)
+and the TextureBank entries, laid out as a mod folder. Plus PNG or WebP images up to 2048 px for your Nexus page.
+
+![Export dialog](docs/images/export.png)
+
+**Bring the icons you already have.** Import a mod's icon files in bulk, even the faded tooltip ones (the faded strokes
+get rebuilt). They keep their original names, so you can fix them up and export them straight back into your mod.
+
+Plus tabs for several icons at once, drafts, autosave, full undo, and keyboard shortcuts (press `?` for the list).
+
+## Getting started
+
+Windows 10 or 11. (macOS and Linux start scripts are included but haven't been tested yet.)
+
+1. Download `bg3-icon-generator-<version>.zip` from the
+   [latest release](https://github.com/SpasticPengu/BG3-Icon-Generator/releases/latest) and unzip it anywhere.
+2. Double-click **`Start.bat`**. On macOS use `Start.command`, on Linux `./start.sh`.
+
+The first start takes a few minutes and needs the internet once. It sets up its own copy of Python in a `.runtime`
+folder next to the app (nothing is installed anywhere else, no admin rights needed) and downloads the game's icons
+(about 110 MB). After that the editor opens in your browser. Everything together takes about 420 MB.
+
+You don't need the game files or any other modding tools. To uninstall, delete the folder.
+
+## Putting an icon in your mod
+
+1. Set the icon's **Name in the game** in the Spell panel. That's the name your spell's `Icon` field uses.
+2. Click **Export**, pick a mod name and export. Use **Export all tabs** to do several icons at once.
+3. Copy the contents of `outputs/editor/<mod name>/mod/` into your mod's folder.
+
+Icons exported to the same mod name share one atlas, so export all of a mod's icons under the same name.
+
+## Updates
+
+When a new version is out, an **Update** button appears in the top bar. It shows what changed and installs it with one
+click. Your drafts, colours, imported icons and exports are never touched by an update. You can turn the check off in
+the shortcuts sheet (`?`).
+
+## Questions
+
+**Is it really free?** Yes, and it'll stay that way.
+
+**Does it change my game?** No. It only writes files into its own folder. You copy the exported files into your mod.
+
+**Can I use the icons I make in my mods?** Yes, that's what it's for. The game's art stays Larian's: see
+[NOTICE.md](NOTICE.md).
+
+**Something broke or looks wrong.** Open an [issue](https://github.com/SpasticPengu/BG3-Icon-Generator/issues) with a
+screenshot.
 
 ## For developers
 
-The app is plain Python (numpy, scipy, Pillow) serving a browser editor (`app/`, plain ES modules, no build step).
-Building the game data from scratch needs an unpacked copy of the game (BG3 Modders Multitool) and the dataset
-pipeline in `iconkit/`; `implementation-plan.md` records how every part was measured and decided, and `research/`
-holds the probes behind it. Releases: a `v<version>` tag builds and publishes the app
-(`.github/workflows/release.yml`); the game data is a separate `data-v<N>` release.
+Plain Python (numpy, scipy, Pillow) serving a browser editor in `app/` (ES modules, no build step). Rebuilding the game
+data needs an unpacked copy of the game and the pipeline in `iconkit/`. `implementation-plan.md` explains how each part
+was measured and why it works the way it does, and `research/` holds the scripts behind those numbers. A `v<version>`
+tag builds and publishes a release (`.github/workflows/release.yml`); the icon data is a separate `data-v<N>` release.
 
-## Credits and notice
+## Credits
 
-Baldur's Gate 3 art belongs to Larian Studios; Dungeons & Dragons material belongs to Wizards of the Coast; spell data
-from the SRD 5.1 (CC BY 4.0). Full text in [NOTICE.md](NOTICE.md). Free, and it will stay free.
+Unofficial fan tool, not made or endorsed by Larian Studios or Wizards of the Coast. Baldur's Gate 3 art belongs to
+Larian Studios, Dungeons & Dragons material to Wizards of the Coast, and spell data comes from the SRD 5.1 (CC BY 4.0).
+Full notice in [NOTICE.md](NOTICE.md).
