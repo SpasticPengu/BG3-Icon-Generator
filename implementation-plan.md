@@ -12,7 +12,7 @@
 > Repository set up (user, 2026-10-19): README, description, topics, wiki / projects off, branches deleted on merge,
 > Dependabot alerts + security fixes, private vulnerability reporting (secret scanning was on). `main` = cfcdbcf.
 > Licence: GNU GPL v3 (user, 2026-10-19). Open for the user: whether the icon data moves off Releases, an optional
-> social preview image (Settings, web only), and the first app release (`v0.7.0` tag, workflow 8.1b) when asked. Still before a public release: 8.3 (extract from the user's own
+> social preview image (Settings, web only), and nicer release notes for v0.7.0 (the in-app Update dialog shows them). Still before a public release: 8.3 (extract from the user's own
 > BG3 install; the editor's first run needs `data/` from the Multitool unpack today), 8.4 (README, licences). **Later, user 2026-10-19 ("we'll come back to this"):
 > vector conversion edge cases**: a crescent outline whose tip test misses (1 of 4 synthetic crescents still traces as
 > two arcs capped side by side; the acute-angle / spur limits in `vectorize.js` were tuned on Moonbeam only), and how
@@ -1854,10 +1854,24 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: repository settings (user: enable / disable what's relevant): rulesets without bypass (tags v* and data-v*:
+  no delete / move; main: no delete / force push; data: no delete), Actions limited to GitHub-owned actions and every
+  outside contributor's workflow needs approval (token already read-only), CodeQL default setup (Python, JS, workflows),
+  Discussions on, squash merges only with update-branch. Secret scanning's generic patterns / validity checks are not
+  available on a personal account (requests accepted, stayed off). Immutable releases left off (gh uploads assets
+  after creating the release).
+- 2026-10-19: **first app release v0.7.0** (user): annotated tag on main 62b6418 (SpasticPengu, UTC); the workflow ran
+  green (tag check, updater self-test, build, publish): https://github.com/SpasticPengu/BG3-Icon-Generator/releases/tag/v0.7.0
+  (zip, 39 files: launchers, LICENSE, NOTICE, README, data manifest; no research / plan). Checked as a modder: the
+  published zip unzipped into an empty folder, Start.bat set up uv + Python, downloaded and checked the icons from
+  the data-v1 tag, editor up; the update check sees 0.7.0 as current. Release notes are GitHub's generated one-liner.
 - 2026-10-19: icon data moved off Releases (user): orphan branch `data` (no parents, SpasticPengu / UTC, 3,524 files +
   README) tagged `data-v1`; the code ships `iconkit/data_manifest.json` (SHA-256 per file) and downloads GitHub's zip of
   the tag, checking every file and writing only the manifest's (`update.build_data` / `commit_data` / `fetch_data`);
-  the data-v1 release and its old tag deleted. Update test passes; live download checked.
+  the data-v1 release and its old tag deleted. First push failed the live check: core.autocrlf had turned the JSON's
+  CRLF into LF in the commit (hash miss, refused as designed); the data tree now carries `* -text` and commits with
+  autocrlf off, the self-test commits a CRLF file through real git. Re-tagged (ff5524b) and force-pushed; live download
+  from GitHub: 3,524 files, every hash matched. Code on main: 62b6418.
 - 2026-10-19: licence GNU GPL v3 for the code (user): LICENSE (GitHub's canonical text), README + NOTICE say it covers
   the code, not the game's art; GitHub detects it. Pushed as 24692f9.
 - 2026-10-19: README rewritten for modders (user: friendly, screenshots, no AI-sounding wording) with four images in

@@ -95,7 +95,9 @@ def damage_type(e):
     t = e.get("DamageType", "")
     if not t:
         src = " ".join(e.get(k, "") for k in ("TooltipDamageList", "SpellSuccess", "SpellProperties", "SpellFail"))
-        m = re.search(r"DealDamage\((?:[^(),]|\([^()]*(?:\([^()]*\))?[^()]*\))+,\s*(\w+)", src)
+        # one-level ( ... ) groups, unambiguous (CodeQL py/redos: the old form backtracked exponentially on ")(" runs);
+        # same first match as before on all 3,234 DealDamage lines of the game stats (2026-10-19)
+        m = re.search(r"DealDamage\((?:[^(),]|\((?:[^()]|\([^()]*\))*\))+,\s*(\w+)", src)
         t = m.group(1) if m else ""
     t = "Weapon" if "Weapon" in t else t           # MainMeleeWeaponDamageType etc. = whatever is wielded
     return t if t in DAMAGE_TYPES else ""

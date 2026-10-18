@@ -165,6 +165,10 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   personal-strings check from memory `public-repo-identity` (its terms stay out of the repo) and find nothing, then
   `TZ=UTC git commit-tree <work-branch>^{tree} -p public -m "..."`, `git branch -f public <sha>`, and push with
   `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin public:main`.
+  Rulesets (no bypass, 2026-10-19): `main` can't be deleted or force-pushed (fetch first; if a pull request was merged
+  on GitHub, bring it into the work branch and `public` before the next snapshot), `v*` / `data-v*` tags can't be
+  deleted or moved (a fix means turning the "Release and data tags" ruleset off for that push), `data` can't be
+  deleted (a new data version may replace it). Merges: squash only. Actions: GitHub-owned actions only.
   Game data (no release): orphan branch `data`, one tag per version `data-v<DATA_VERSION>`; the code ships
   `iconkit/data_manifest.json` (every file's SHA-256) and installed copies download GitHub's zip of the tag. New data:
   bump `iconkit.DATA_VERSION`, `python -m iconkit.update data` (needs the game unpack: tree in `outputs/data-tree`, the
