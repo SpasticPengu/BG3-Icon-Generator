@@ -2382,9 +2382,13 @@ addEventListener("resize", () => closeMenu());
 // ---------------------------------------------------------------- updates (iconkit/update.py): the newest release,
 // downloaded and checked on request, installed by a restart (the open tabs are autosaved first and restored after)
 let UPD = null;
-async function checkUpdate(force = false, online = true) {   // online false: the version only, nothing leaves the computer
-  try { UPD = await post("/api/update", {action: online ? "check" : "version", force}); } catch { return; }
+async function checkUpdate(online = true) {   // online false: the version only, nothing leaves the computer
+  const ask = action => post("/api/update", {action});
+  try { UPD = await ask(online ? "check" : "version").catch(() => ask("version")); } catch { return; }   // offline: the version still shows
   $("#verLine").textContent = `Version ${UPD.version}${UPD.dev ? " (development)" : ""}`;
+  const vt = $("#verTag");                       // the version, always in sight (user 2026-10-19); click: shortcuts + updates
+  vt.hidden = false; vt.textContent = `v${UPD.version}`; vt.classList.toggle("new", !!UPD.newer);
+  vt.title = `Version ${UPD.version}${UPD.dev ? " (development)" : ""}: ${UPD.newer ? `${UPD.latest} is available` : "click for updates and shortcuts"}`;
   const ready = UPD.staged || UPD.newer;
   $("#updBtn").hidden = !ready || !UPD.enabled;
   if (ready) $("#updBtnT").textContent = UPD.staged && !UPD.newer ? "Restart to update" : `Update to ${UPD.latest}`;
@@ -2398,6 +2402,7 @@ $("#updBtn").onclick = () => {
   $("#updateDlg").showModal();
 };
 $("#updLater").onclick = () => $("#updateDlg").close();
+$("#verTag").onclick = () => UPD?.newer || UPD?.staged ? $("#updBtn").click() : $("#help").showModal();
 $("#updGo").onclick = async () => {
   const say = t => $("#updState").textContent = t;
   $("#updGo").disabled = true;
@@ -2415,7 +2420,7 @@ $("#updGo").onclick = async () => {
   } catch (e) { say("Couldn't update: " + e.message); $("#updGo").disabled = false; }
 };
 $("#updAuto").checked = store.get("updates", true);
-$("#updAuto").onchange = e => { store.set("updates", e.target.checked); checkUpdate(true, e.target.checked); };
+$("#updAuto").onchange = e => { store.set("updates", e.target.checked); checkUpdate(e.target.checked); };
 
 // ---------------------------------------------------------------- top bar, docks, splitters, keys
 $("#undo").onclick = undo; $("#redo").onclick = redo;
@@ -2712,7 +2717,7 @@ else {
   if (a.doc?.v === 2 && a.doc.docs.some(d => d.items.length)) { await restoreDocs(a.doc); status(`Restored your last session (${docs.length} tab${docs.length > 1 ? "s" : ""})`, "ok"); }
   else if (a.doc?.items?.length) { await deserialize(a.doc); undoStack = []; status("Restored your last session", "ok"); }
   else { changed(); markSaved(); status("Ready. Open an icon, add a shape or start drawing. Press ? for shortcuts."); }
-  setTimeout(() => checkUpdate(false, store.get("updates", true)), 2000);
+  setTimeout(() => checkUpdate(store.get("updates", true)), 2000);
   mark("restored");
   await Promise.race([new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))), new Promise(r => setTimeout(r, 500))]);
   mark("painted");

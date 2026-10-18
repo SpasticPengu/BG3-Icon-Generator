@@ -1854,6 +1854,17 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: user's update test (0.7.0 → 0.7.1) notes fixed: (1) the check cached GitHub's answer 6 h, so a release
+  published after the first start showed only after toggling checks: now one request per start / toggle (60 an hour
+  allowed; an ETag try saved nothing, unauthenticated 304s still count). (2) An update restart opened a second browser
+  window: `outputs/update/restarting` marker, the next start opens none (the page reloads itself). (3) Version always
+  shown: `v0.7.1` tag at the right of the status bar (accent when an update is out; click = update or shortcuts), also
+  when the check fails. (4) Ctrl+C asked "Terminate batch job (Y/N)?": measured with a real CTRL_C_EVENT in a hidden
+  console, `<nul` redirection and python-as-last-line both still prompt; only `start /b` + ending the batch exits clean.
+  Start.bat now syncs, then `start /b python -m iconkit.launch` (the exit-75 restart loop + `uv pip sync`, Ctrl+C
+  turned back on) and ends. Real launcher: cmd gone while serving, all processes gone 5 s after Ctrl+C; the 75 loop
+  checked with the real uv. Side effect: from a command prompt the prompt returns while the editor runs. start.sh
+  unchanged (shells don't ask). update test passes.
 - 2026-10-19: repository settings (user: enable / disable what's relevant): rulesets without bypass (tags v* and data-v*:
   no delete / move; main: no delete / force push; data: no delete), Actions limited to GitHub-owned actions and every
   outside contributor's workflow needs approval (token already read-only), CodeQL default setup (Python, JS, workflows),

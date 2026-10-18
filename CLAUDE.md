@@ -158,7 +158,9 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   no `pyproject.toml` at the root on purpose (a `uv sync` there would strip the CUDA `.venv`). Change libraries in
   `requirements.in`, recompile the lock (command in its header), rerun `update test`. Keep `Start.bat` CRLF (edit it
   with Python or Write, not `sed`, which drops the CRs; `update test` checks). Test the launcher from PowerShell with
-  `cmd.exe /c .\Start.bat --no-browser --drafts DIR`; stop its python afterwards (port 8765).
+  `cmd.exe /c .\Start.bat --no-browser --drafts DIR` (returns at once: the batch hands the console to `iconkit/launch.py`
+  with `start /b` so Ctrl+C never asks "Terminate batch job"; that loop restarts after an update); stop its python
+  afterwards (port 8765). Ctrl+C harness: send a real CTRL_C_EVENT via AttachConsole to a hidden console.
   Repository: `SpasticPengu/BG3-Icon-Generator` (public). **Commit here as SpasticPengu (repo config) in UTC: `TZ=UTC git
   commit ...`** (overrides the global real-name identity; user 2026-10-19). Branch `public` tracks `origin/main`; every
   older branch has the user's name and +11:00 dates: never push them. Publish (only when the user asks): run the

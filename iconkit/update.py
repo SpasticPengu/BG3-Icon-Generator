@@ -3,7 +3,8 @@ when it's finally distributed").
 
 A release is a zip of the app's code with manifest.json at its root ({version, files: {path: sha256}}), published as a
 GitHub release asset of REPO (its SHA-256: the asset's digest, else a <zip>.sha256 asset beside it).
-  check     the newest release (one GitHub API request, cached CACHE_H hours in outputs/update/latest.json)
+  check     the newest release: one GitHub API request each time (GitHub allows 60 an hour per address without signing
+            in; a 6 h cache hid a release published after the first start, user 2026-10-19)
   stage     download the zip, verify its SHA-256 and every file against its manifest, unpack to outputs/update/staged/
             (the app itself is not touched yet)
   apply     at the next start, before the editor runs: back up what the update replaces or removes to
@@ -29,7 +30,6 @@ from . import __version__, DATA_VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = "SpasticPengu/BG3-Icon-Generator"   # the GitHub repository the releases come from (empty: no update checks)
-CACHE_H = 6
 SHIP = ["app", "iconkit", "README.md", "LICENSE", "NOTICE.md", "requirements.in", "requirements.lock", "Start.bat", "Start.command", "start.sh"]
 SKIP = {"__pycache__", ".pytest_cache"}
 DATA_EXT = {".json", ".jsonl", ".txt"}       # a user's change to one of these is kept; code is always replaced
@@ -74,25 +74,19 @@ def fetch(url, timeout=20):
         return r.read()
 
 
-def check(root=ROOT, feed=None, force=False):
+def check(root=ROOT, feed=None):
     """-> {version, enabled, latest?, newer?, notes?, url?, zip?, digest?}. feed: a URL or file with GitHub's
     releases/latest JSON (tests; else ICONGEN_UPDATE_FEED, else REPO's)"""
     feed = feed or os.environ.get("ICONGEN_UPDATE_FEED") or (f"https://api.github.com/repos/{REPO}/releases/latest" if REPO else None)
     out = {"version": __version__, "enabled": bool(feed)}
     if not feed:
         return out
-    cache = upd(root) / "latest.json"
-    if not force and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_H * 3600:
-        rel = json.loads(cache.read_text(encoding="utf-8"))
-    else:
-        try:
-            rel = json.loads(fetch(feed if "://" in feed else Path(feed).resolve().as_uri(), 8))
-        except urllib.error.HTTPError as e:            # 404: the repository has no release yet, nothing to update to
-            if e.code != 404:
-                raise
-            rel = {}
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(json.dumps(rel), encoding="utf-8")
+    try:
+        rel = json.loads(fetch(feed if "://" in feed else Path(feed).resolve().as_uri(), 8))
+    except urllib.error.HTTPError as e:                # 404: the repository has no release yet, nothing to update to
+        if e.code != 404:
+            raise
+        rel = {}
     if not str(rel.get("tag_name", "")).startswith("v"):  # only app releases (v<version>): GitHub calls a lone data-v<N>
         rel = {}                                           # release "latest" even when it is marked otherwise
     assets = {a["name"]: a for a in rel.get("assets", [])}
@@ -391,7 +385,7 @@ def test():
         feed = t / "feed.json"
         good = {"tag_name": "v2.0.0", "body": "notes", "assets": [{"name": "r.zip", "browser_download_url": zp.as_uri(), "digest": "sha256:" + sha(zp)}]}
         feed.write_text(json.dumps({**good, "assets": [{**good["assets"][0], "digest": "sha256:" + "0" * 64}]}), encoding="utf-8")
-        info = check(root, feed=str(feed), force=True)
+        info = check(root, feed=str(feed))
         assert info["latest"] == "2.0.0" and info["newer"] == (ver("2.0.0") > ver(__version__)), info
         try:
             stage(info, root)
@@ -399,7 +393,7 @@ def test():
         except ValueError as e:
             assert "SHA-256" in str(e) and not staged(root), e
         feed.write_text(json.dumps(good), encoding="utf-8")
-        info = check(root, feed=str(feed), force=True)
+        info = check(root, feed=str(feed))
         assert info["latest"] == "2.0.0" and info["notes"] == "notes", info
         assert stage(info, root) == "2.0.0" and staged(root)
         try:                                           # a failure half way: everything as before
@@ -488,7 +482,7 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     cmd = a[0] if a else "check"
     if cmd == "check":
-        log(json.dumps(check(force=True), indent=1))
+        log(json.dumps(check(), indent=1))
     elif cmd == "apply":
         apply()
     elif cmd == "rollback":

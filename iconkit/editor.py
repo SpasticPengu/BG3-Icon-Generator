@@ -1191,13 +1191,14 @@ def update_req(q):
         stop.start()
         return {"restarting": True}
     try:
-        info = update.check(force=bool(q.get("force")))
+        info = update.check()
     except Exception as ex:                    # offline, rate-limited: say so, the editor works on
         info = {"version": update.__version__, "enabled": True, "error": f"{type(ex).__name__}: {ex}"}
     return {**info, "staged": update.staged(), "dev": DEV}
 
 
 SERVER, RESTART = None, threading.Event()
+RESTARTING = OUT.parent / "update" / "restarting"     # set by an update restart; the next start opens no browser
 
 
 def restart():
@@ -1205,6 +1206,8 @@ def restart():
     exit code 75, when it started us; else this process replaced)"""
     from . import update
     log("[editor] restarting to install the update")
+    RESTARTING.parent.mkdir(parents=True, exist_ok=True)
+    RESTARTING.write_text(str(time.time()), encoding="utf-8")   # the page that asked reloads itself: no new window
     SERVER.server_close()
     try:
         update.apply()
@@ -1340,7 +1343,9 @@ def serve(args):
     url = f"http://127.0.0.1:{srv.server_port}/"
     threading.Thread(target=state, daemon=True).start()               # warm up (backgrounds) while the page loads
     log(f"[editor] open {url}  (Ctrl+C stops)")
-    if "--no-browser" not in args:
+    reopened = RESTARTING.exists() and time.time() - RESTARTING.stat().st_mtime < 300   # after an update the open page
+    RESTARTING.unlink(missing_ok=True)                 # reloads itself (a new window each update, user 2026-10-19)
+    if "--no-browser" not in args and not reopened:
         threading.Timer(.5, webbrowser.open, (url,)).start()
     try:
         srv.serve_forever()
