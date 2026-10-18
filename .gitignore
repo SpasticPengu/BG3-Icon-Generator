@@ -1,0 +1,9 @@
+# Extracted Larian assets, model weights and generated output never go in git
+data/
+models/
+outputs/
+*.safetensors
+__pycache__/
+.venv/
+tools/
+.runtime/

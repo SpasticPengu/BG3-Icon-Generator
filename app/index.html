@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BG3 Icon Editor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121110'/%3E%3Cpath d='M9 24 22 6l-3 11h5L11 26z' fill='%23e8b04a'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #121110; --panel: #1b1917; --panel2: #23201d; --raise: #2c2925; --line: #36322d; --line2: #4a453e;
+  --text: #ece6dc; --dim: #a8a093; --faint: #7d766b; --accent: #e8b04a; --accent2: #f3c76f; --accent-ink: #1b1305;
+  --focus: #7cc4ff; --danger: #ff8a78; --ok: #7fd18b; --dark: rgb(33, 31, 28);
+  --lw: 264px; --rw: 330px; --r: 6px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+@media (prefers-reduced-motion: no-preference) { button, .cell, .swatch { transition: background-color .12s, border-color .12s, color .12s; } }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; background: var(--raise); border: 1px solid var(--line);
+  border-radius: var(--r); cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--line2); background: #34302b; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { background: var(--accent2); }
+.btn.icon { width: 30px; padding: 0; justify-content: center; }
+.btn[aria-pressed="true"] { background: #4a3b1c; border-color: var(--accent); color: var(--accent2); }
+/* segmented control: a recessed track, the chosen option a raised pill (no shared borders between options) */
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r); }
+.seg .btn { height: 22px; padding: 0 9px; border: 0; border-radius: 4px; background: transparent; color: var(--dim); }
+.seg .btn:hover:not(:disabled) { background: var(--raise); color: var(--text); }
+.seg .btn[aria-pressed="true"] { background: #4a3b1c; color: var(--accent2); box-shadow: inset 0 0 0 1px var(--accent); }
+select, input[type=text], input[type=number] { height: 28px; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r); padding: 0 7px; min-width: 0; }
+input[type=number] { width: 64px; }
+input[type=range] { accent-color: var(--accent); width: 110px; }
+input[type=checkbox] { accent-color: var(--accent); margin: 0 2px 0 0; vertical-align: -2px; }
+label.f { display: block; color: var(--dim); font-size: 12px; margin: 8px 0 3px; }
+.sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; flex: none; }
+
+/* the splitters set --lw / --rw inline on #app; a hidden dock zeroes its own column variables, which inline widths can't override */
+#app { display: grid; height: 100vh; --lc: var(--lw); --ls: 5px; --rc: var(--rw); --rs: 5px;
+  grid-template-columns: 54px var(--lc) var(--ls) minmax(0, 1fr) var(--rs) var(--rc);
+  grid-template-rows: 44px auto 32px minmax(0, 1fr) 26px;
+  grid-template-areas: "top top top top top top" "opts opts opts opts opts opts" "rail left sl tabs sr right" "rail left sl vp sr right" "status status status status status status"; }
+#app.noleft { --lc: 0px; --ls: 0px; } #app.noleft #left, #app.noleft #splitL { display: none; }
+#app.noright { --rc: 0px; --rs: 0px; } #app.noright #right, #app.noright #splitR { display: none; }
+header { grid-area: top; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: .2px; margin-right: 8px; white-space: nowrap; }
+.brand b { color: var(--accent); }
+.grow { flex: 1; }
+#zoomv { min-width: 56px; justify-content: center; }
+#opts { grid-area: opts; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 42px; padding: 6px 10px; background: var(--panel2); border-bottom: 1px solid var(--line); }
+#opts > * { white-space: nowrap; }
+#opts .lbl { color: var(--dim); font-size: 12px; }
+/* slider = scrubbable name + range + typed value (Photoshop / Figma / Affinity) */
+.ctl { display: inline-flex; align-items: center; gap: 6px; }
+.scrub { cursor: ew-resize; color: var(--dim); font-size: 12px; user-select: none; touch-action: none; }
+.scrub:hover { color: var(--text); }
+body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: none; }
+input.num { width: 42px; height: 24px; padding: 0 5px; text-align: right; background: transparent; border: 1px solid transparent; border-radius: 4px;
+  color: var(--text); font-variant-numeric: tabular-nums; }
+input.num:hover { border-color: var(--line); background: var(--panel); }
+input.num:focus { border-color: var(--accent); background: var(--panel); outline: none; }
+input.num.mod { color: var(--accent2); }
+.unit { color: var(--dim); font-size: 11px; margin-left: -3px; }
+#opts .hint { color: var(--dim); }
+/* tools: raised chips with their shortcut letter, the active one filled with the accent (it must read at a glance) */
+#rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 0; background: #161412; border-right: 1px solid var(--line); }
+#rail .btn { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; background: var(--panel2); border-color: var(--line); color: var(--text); }
+#rail .btn svg.i { width: 21px; height: 21px; stroke-width: 1.8; }
+#rail .btn:hover { background: var(--raise); border-color: var(--line2); }
+#rail .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent2); color: var(--accent-ink); box-shadow: 0 2px 10px #e8b04a38; }
+#rail .btn::after { content: attr(data-key); position: absolute; right: 3px; bottom: 1px; font: 600 9px/1 "Segoe UI", system-ui, sans-serif; color: var(--dim); }
+#rail .btn[aria-pressed="true"]::after { color: var(--accent-ink); }
+#rail .gap { width: 26px; height: 1px; margin: 4px 0; background: var(--line2); }
+aside { background: var(--panel); min-height: 0; overflow: auto; }
+#left { grid-area: left; display: flex; flex-direction: column; padding: 8px; gap: 7px; }
+#right { grid-area: right; display: flex; flex-direction: column; overflow: hidden; }
+/* Properties + Spell scroll together; Layers keeps its own height (drag the divider) and scrolls inside, so a long stroke
+   list never pushes the other panels; the in-game previews are a compact strip at the bottom */
+#dockTop { flex: 1 1 auto; min-height: 100px; overflow: auto; }
+.hsplit { flex: none; height: 7px; cursor: row-resize; touch-action: none; background: var(--panel) linear-gradient(var(--line2), var(--line2)) no-repeat center / 100% 1px; }
+.hsplit:hover, .hsplit:focus-visible { background-image: linear-gradient(var(--accent), var(--accent)); background-size: 100% 3px; }
+#pnLayers { flex: none; height: var(--lh, 40%); min-height: 110px; display: flex; flex-direction: column; padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
+.pnh { display: flex; align-items: center; gap: 6px; margin: 0; padding: 8px 0 7px; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.pnh .count { margin-left: auto; font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+#pnLayers #layers { flex: 1; min-height: 0; max-height: none; }
+.lhint { margin-top: 5px; }
+#pnGame { flex: none; border-bottom: 0; }
+/* a 5 px grip drawn as a 1 px line; the accent shows it can be dragged */
+.split { background: var(--panel) linear-gradient(var(--line), var(--line)) no-repeat center / 1px 100%; cursor: col-resize; touch-action: none; }
+.split:hover, .split:focus-visible { background-image: linear-gradient(var(--accent), var(--accent)); background-size: 3px 100%; }
+#splitL { grid-area: sl; } #splitR { grid-area: sr; }
+/* library sections: an icon over a short label, the open one raised with an accent bar and icon */
+.tabs { display: flex; gap: 2px; background: var(--panel2); padding: 3px; border-radius: 8px; border: 1px solid var(--line); }
+.tabs button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 46px;
+  padding: 0 2px; border: 0; border-radius: 6px; background: transparent; color: var(--dim); cursor: pointer; font-size: 11.5px; }
+.tabs button span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs button svg.i { width: 19px; height: 19px; }
+.tabs button:hover { color: var(--text); background: #2a2622; }
+.tabs button[aria-selected="true"] { background: var(--raise); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent), 0 1px 3px #0006; }
+.tabs button[aria-selected="true"] svg.i { color: var(--accent2); }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 5px; overflow: auto; min-height: 0; flex: 1; align-content: start; padding: 1px; }
+.cell { position: relative; background: var(--dark); border: 1px solid var(--line); border-radius: var(--r); cursor: grab; aspect-ratio: 1; padding: 0; }
+.cell:hover { border-color: var(--accent); }
+.cell img { width: 100%; height: 100%; display: block; border-radius: 5px; pointer-events: none; }
+.cell.off { opacity: .35; } .cell .cap { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; background: #000a; padding: 1px 3px; border-radius: 0 0 5px 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell.warn { border-color: #b8742a; } .cell .cdot { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px #0008; }
+.muted { color: var(--dim); font-size: 12px; }
+#grid > .empty { grid-column: 1 / -1; padding: 18px 8px; text-align: center; }
+.row { display: flex; gap: 6px; align-items: center; } .row > .f1 { flex: 1; min-width: 0; }
+/* tabs: one per open icon (Photoshop's document tabs), the open one joined to the canvas */
+#docTabs { grid-area: tabs; display: flex; align-items: flex-end; gap: 2px; padding: 0 6px; background: #161412; border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: thin; min-width: 0; }
+.dtab { display: flex; align-items: center; gap: 7px; height: 27px; padding: 0 4px 0 10px; max-width: 200px; flex: none; cursor: pointer; color: var(--dim);
+  background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; font-size: 12.5px; }
+.dtab:hover { color: var(--text); background: #221f1c; }
+.dtab[aria-selected="true"] { color: var(--text); background: #0d0c0b; border-color: var(--line2); box-shadow: inset 0 2px 0 var(--accent); }
+.dtab .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dtab .dd { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--line2); }
+.dtab .x { width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: var(--faint); cursor: pointer; font-size: 15px; line-height: 1; }
+.dtab .x:hover { background: var(--raise); color: var(--text); }
+.dtab.picked { box-shadow: inset 0 0 0 1px var(--accent); } .dtab.picked[aria-selected="true"] { box-shadow: inset 0 2px 0 var(--accent), inset 0 0 0 1px var(--accent); }
+/* unsaved: a dot where the close button is (the button shows on hover / focus), like VS Code */
+.dtab.unsaved .x { font-size: 0; } .dtab.unsaved .x::after { content: "●"; font-size: 10px; color: var(--accent2); }
+.dtab.unsaved:hover .x, .dtab.unsaved .x:focus-visible { font-size: 15px; } .dtab.unsaved:hover .x::after, .dtab.unsaved .x:focus-visible::after { content: none; }
+.dren { width: 130px; height: 21px; padding: 0 4px; background: var(--panel2); border: 1px solid var(--accent); border-radius: 4px; }
+#updBtn { border-color: var(--accent); color: var(--accent2); }
+#updateDlg { width: min(520px, 92vw); } #updNotes { max-height: 40vh; overflow: auto; white-space: pre-wrap; margin: 6px 0 0; padding: 8px 10px;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r); font-size: 12.5px; } #updNotes:empty { display: none; }
+#unsavedDlg { width: min(420px, 92vw); } #usList { max-height: 40vh; overflow: auto; margin-top: 6px; }
+.dnew { width: 27px; height: 27px; flex: none; border: 0; border-radius: 6px 6px 0 0; background: transparent; color: var(--dim); font-size: 18px; cursor: pointer; }
+.dnew:hover { background: var(--panel); color: var(--text); }
+main#vp { grid-area: vp; position: relative; overflow: hidden; background: #0d0c0b; outline: none; }
+main#vp:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+#stage { position: absolute; left: 0; top: 0; width: 512px; height: 512px; transform-origin: 0 0; box-shadow: 0 0 0 1px #000, 0 8px 30px #0008; }
+#stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#stage.px canvas { image-rendering: pixelated; }
+#stage.bg-dark { background: var(--dark); } #stage.bg-black { background: #000; } #stage.bg-grey { background: #808080; }
+#stage.bg-light { background: #d9d6d0; } #stage.bg-white { background: #fff; }
+#stage.bg-check { background: repeating-conic-gradient(#bdbdbd 0 25%, #f2f2f2 0 50%) 0 0 / 32px 32px; }
+#art { display: none; } #stage.lines #art { display: block; } #stage.lines #gl { display: none; }
+#overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+#empty { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 360px; text-align: center; color: var(--dim);
+  background: #1b1917e6; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; pointer-events: none; }
+#empty b { color: var(--text); }
+details.pn { border-bottom: 1px solid var(--line); }
+details.pn > summary { display: flex; align-items: center; gap: 6px; padding: 9px 12px; cursor: pointer; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); list-style: none; user-select: none; }
+details.pn > summary::-webkit-details-marker { display: none; }
+details.pn > summary:hover { color: var(--text); }
+details.pn > summary::before { content: "▸"; font-size: 10px; transition: transform .12s; }
+details.pn[open] > summary::before { transform: rotate(90deg); }
+details.pn > .body { padding: 0 12px 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.xywh { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .xywh label { color: var(--dim); font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
+.xywh input { width: 100%; } .xywh .scrub { font-size: 11px; align-self: flex-start; padding-right: 8px; }
+.rotf { display: inline-flex; align-items: center; gap: 6px; }
+.alignhead { margin-top: 10px; } .alignhead .f { margin: 0; }
+.seg.sm .btn { height: 20px; padding: 0 8px; font-size: 12px; }
+.row.tools { margin-top: 6px; gap: 2px; } .row.tools .btn.icon { width: 28px; height: 28px; } .row.tools .sep { margin: 0 3px; }
+#layers { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel2); }
+#layers li { display: flex; align-items: center; gap: 5px; height: 32px; padding: 0 4px 0 6px; border-bottom: 1px solid #2a2724; cursor: pointer; }
+#layers li:hover { background: #2a2622; } #layers li[aria-selected="true"] { background: #3d3220; }
+#layers li .lt { width: 24px; height: 24px; flex: none; border-radius: 3px; background: var(--dark); box-shadow: inset 0 0 0 1px #0006; }
+#layers li.empty { height: auto; padding: 10px; cursor: default; white-space: normal; }
+details.pn > summary .count { margin-left: auto; font-weight: 500; letter-spacing: 0; color: var(--dim); font-variant-numeric: tabular-nums; }
+#layers li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#layers li.hid .nm { opacity: .45; }
+#layers li .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line2); flex: none; } #layers li .dot.second { background: #79b8ff; }
+#layers li button { width: 24px; height: 24px; border: 0; background: transparent; color: var(--dim); cursor: pointer; border-radius: 4px; display: grid; place-items: center; }
+#layers li button:hover { background: var(--raise); color: var(--text); }
+/* groups: a folder row (chevron, count) with its strokes indented under it when open */
+#layers li.grp .fold { width: 18px; } #layers li.grp .fold svg { transition: transform .12s; transform: rotate(-90deg); width: 14px; height: 14px; }
+#layers li.grp[aria-expanded="true"] .fold svg { transform: none; }
+#layers li.grp svg.lt { padding: 3px; color: var(--accent2); background: transparent; box-shadow: none; }
+#layers li.grp .nm { font-weight: 600; } #layers li.grp.inside { box-shadow: inset 2px 0 0 var(--accent); }
+#layers li .cnt { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+#layers li.sub { padding-left: 24px; background: #1e1c1a; } #layers li.sub:hover { background: #2a2622; }
+#layers li.sub[aria-selected="true"] { background: #3d3220; }
+#layers li.drop-before { box-shadow: inset 0 2px 0 var(--accent); } #layers li.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 6px; }
+.swatch { aspect-ratio: 1; min-height: 28px; border-radius: 7px; border: 1px solid #0009; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px #ffffff0d; }
+.swatch:hover:not([aria-pressed="true"]) { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--dim); }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+.swatch.cust { position: relative; } .swatch.cust::after { content: ""; position: absolute; right: 3px; top: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--text); opacity: .8; }
+.swatch.add { background: var(--panel2); color: var(--dim); font-size: 17px; border: 1px dashed var(--line2); }
+.swatch.add:hover { color: var(--text); }
+#colourDlg { width: min(440px, 92vw); }
+.cdramp { height: 26px; border-radius: 6px; margin: 10px 0; border: 1px solid var(--line); background: var(--panel2); }
+#cdStops { gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.cdstop { display: inline-flex; align-items: center; gap: 2px; }
+.cdstop input[type=color] { width: 44px; height: 32px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel2); cursor: pointer; }
+.cdstop .x { width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: var(--faint); cursor: pointer; }
+.cdstop .x:hover { background: var(--raise); color: var(--text); }
+.swatch.auto, .swatch.none { background: var(--panel2); color: var(--dim); font-size: 12px; font-weight: 600; border: 1px dashed var(--line2); }
+.chosen { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; } .chosen .bar { width: 34px; height: 34px; border-radius: 8px; flex: none; border: 1px solid #0009; }
+.chosen .bar.none { background: repeating-linear-gradient(-45deg, var(--line2) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 1px var(--line2); }
+.grid2 select, .grid2 input { width: 100%; }
+.previews { display: flex; gap: 8px; align-items: flex-end; justify-content: space-between; }
+.previews figure { margin: 0; text-align: center; color: var(--dim); font-size: 11px; }
+.previews canvas, .previews img { display: block; background: var(--dark); border-radius: 4px; margin-bottom: 3px; }
+#ctrl { width: 72px; height: 72px; } #hot { width: 64px; height: 64px; image-rendering: pixelated; } #tip { width: 100px; height: 100px; }
+#result { font-size: 12px; color: var(--dim); word-break: break-all; margin-top: 8px; } #result img { background: var(--dark); margin: 4px 4px 0 0; border-radius: 3px; }
+#statusbar { grid-area: status; display: flex; align-items: center; gap: 14px; padding: 0 10px; background: var(--panel); border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; contain: strict; }
+#status { flex: 1; overflow: hidden; text-overflow: ellipsis; } #status.err { color: var(--danger); } #status.ok { color: var(--ok); }
+#statusbar span { font-variant-numeric: tabular-nums; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line2); border-radius: 10px; padding: 18px 22px; width: min(860px, 94vw); box-shadow: 0 24px 60px #000c; }
+dialog::backdrop { background: #0009; }
+dialog h2 { margin: 0 0 10px; font-size: 16px; }
+dialog table { border-collapse: collapse; width: 100%; } dialog td { padding: 3px 8px 3px 0; vertical-align: top; } dialog td:first-child { white-space: nowrap; }
+kbd { font: 11px ui-monospace, Consolas, monospace; background: var(--raise); border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+/* one styled tooltip for the whole page (editor.js): name, key caps, a line of description */
+#tooltip { position: fixed; left: 0; top: 0; z-index: 50; max-width: 300px; padding: 6px 9px; border-radius: 6px; background: #2e2a26;
+  border: 1px solid var(--line2); color: var(--text); font-size: 12px; line-height: 1.4; white-space: pre-line; box-shadow: 0 8px 24px #000b;
+  pointer-events: none; opacity: 0; transform: translateY(3px); transition: opacity .1s, transform .1s; }
+#tooltip.on { opacity: 1; transform: none; }
+#tooltip b { font-weight: 600; } #tooltip .keys { margin-left: 10px; white-space: nowrap; } #tooltip kbd { margin-left: 2px; background: #3a352f; }
+#tooltip .or { color: var(--dim); font-size: 11px; } #tooltip .desc { color: var(--dim); margin-top: 2px; }
+/* on-canvas HUD: size, zoom, saves */
+#hud { position: absolute; left: 50%; bottom: 16px; padding: 5px 12px; border-radius: 999px; background: #1b1917e8; border: 1px solid var(--line2);
+  color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; opacity: 0; transform: translate(-50%, 6px);
+  transition: opacity .15s, transform .15s; }
+#hud.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #tooltip, #hud { transition: none; } }
+/* canvas context menu */
+#ctxmenu { position: fixed; z-index: 60; min-width: 232px; padding: 4px; background: #262320; border: 1px solid var(--line2); border-radius: 8px;
+  box-shadow: 0 14px 36px #000c; }
+#ctxmenu button { display: flex; align-items: center; gap: 18px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+#ctxmenu button:hover:not(:disabled), #ctxmenu button:focus { background: var(--accent); color: var(--accent-ink); outline: none; }
+#ctxmenu button:disabled { color: var(--faint); cursor: default; }
+#ctxmenu .k { margin-left: auto; color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+#ctxmenu button:hover:not(:disabled) .k, #ctxmenu button:focus .k { color: var(--accent-ink); }
+#ctxmenu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
+#ctxmenu .mh { padding: 4px 10px 2px; font-size: 10.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+#ctxmenu button[role="menuitemradio"]::before { content: ""; width: 14px; flex: none; margin-right: -10px; }
+#ctxmenu button[aria-checked="true"]::before { content: "✓"; color: var(--accent2); }
+#ctxmenu button[aria-checked="true"]:hover::before, #ctxmenu button[aria-checked="true"]:focus::before { color: var(--accent-ink); }
+/* parts panel: a heading per category (sticky while its cards scroll), damage symbols captioned */
+#grid > .sec { grid-column: 1 / -1; position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 2px 4px; background: var(--panel); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--accent2); }
+#grid > .sec span { color: var(--dim); font-weight: 500; letter-spacing: 0; }
+.cell.sym .cap { text-align: center; font-weight: 600; }
+.hgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 6px 28px; max-height: 70vh; overflow: auto; }
+.hgrid h3 { margin: 10px 0 4px; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--accent2); }
+.hgrid td { font-size: 12.5px; } .hgrid td:first-child { width: 42%; color: var(--dim); }
+.hfoot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+/* export dialog: one image to share | mod files */
+#exportDlg { width: min(900px, 95vw); }
+.xgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.xcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.xcard h3 { margin: 0 0 2px; font-size: 13.5px; } .xcard p { margin: 0 0 4px; } .xcard code { color: var(--text); }
+.xprev { display: flex; align-items: center; gap: 12px; margin: 8px 0 2px; }
+#xPrev { width: 132px; height: 132px; object-fit: contain; border-radius: 6px; border: 1px solid var(--line);
+  background: repeating-conic-gradient(#3b3732 0 25%, #2b2824 0 50%) 0 0 / 16px 16px; }
+.xsizes input { width: 74px; flex: none; }
+/* library filter chips: one click, the choice filled with the accent, counts dimmed */
+.fchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.fchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border: 1px solid var(--line); border-radius: 99px;
+  background: var(--panel2); color: var(--dim); font-size: 12px; cursor: pointer; }
+.fchip span { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fchip:hover { color: var(--text); border-color: var(--line2); }
+.fchip[aria-pressed="true"] { background: #4a3b1c; border-color: var(--accent); color: var(--accent2); }
+.fchip[aria-pressed="true"] span { color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; } .chips .btn { height: 24px; padding: 0 7px; font-size: 12px; }
+.chk { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; font-size: 12.5px; line-height: 1.35; } .chk input { margin-top: 2px; }
+.xsub { margin: 4px 0 0 22px; } .xsub select { height: 26px; }
+.xact { margin-top: 12px; justify-content: flex-end; gap: 8px; }
+#xBgC { width: 34px; height: 28px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel2); cursor: pointer; }
+/* start-up screen: covers the page until the editor is built and the last session restored (no half-drawn UI) */
+#boot { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; justify-items: center; gap: 10px;
+  background: var(--bg); color: var(--dim); transition: opacity .2s; }
+#boot b { color: var(--text); font-size: 15px; font-weight: 600; }
+#boot .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line2); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+#boot.done { opacity: 0; pointer-events: none; }
+#boot.err .spin { animation: none; border-color: var(--danger); }
+#boot.err #bootMsg { color: var(--danger); max-width: 520px; text-align: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { :root { --lw: 210px; --rw: 280px; } }
+/* narrow windows: the top bar keeps its icons (labelled, with tooltips), captions go off screen-reader-visibly */
+@media (max-width: 1100px) { header .bt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } header .btn { padding: 0 7px; } }
+</style>
+</head>
+<body>
+<div id="boot" role="status" aria-live="polite"><div class="spin"></div><b>BG3 Icon Editor</b><span id="bootMsg">Starting…</span></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3.5l13 7.2-6 1.4-2.8 6.4z" fill="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-node" viewBox="0 0 24 24"><path d="M5 17C8 6 15 18 19 7"/><rect x="3" y="15" width="4" height="4" fill="currentColor"/><rect x="17" y="5" width="4" height="4" fill="currentColor"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M20 3.5c-3.5 2-7.3 5.6-9.6 8.8l2.3 2.3c3.2-2.3 6.8-6.1 8.8-9.6z"/><path d="M9.3 13.7c-2.4-.3-4.3 1.3-4.3 3.6 0 1.4-.9 2.4-2 2.7 2.5 1.1 6.9.9 7.8-2.2.4-1.5-.1-3-1.5-4.1z"/></symbol>
+  <symbol id="i-line" viewBox="0 0 24 24"><path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.6" fill="currentColor"/><circle cx="19" cy="5" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-ellipse" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6.5"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M3.5 19.5c3-1 5-4.5 7.5-8.5s5-6.5 9.5-7.5"/><rect x="2" y="18" width="3.4" height="3.4" fill="currentColor"/><rect x="9.6" y="9.6" width="3.4" height="3.4"/><rect x="18.6" y="2" width="3.4" height="3.4" fill="currentColor"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M8.5 19.5h11"/><path d="M4.6 14.6l9.2-9.2a1.5 1.5 0 012.1 0l3.3 3.3a1.5 1.5 0 010 2.1l-8.8 8.7H8.5z"/><path d="M9.6 9.6l5.6 5.6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 013 0V11m0-.5V5a1.5 1.5 0 013 0v6m0-4.5a1.5 1.5 0 013 0V14c0 4-2.6 6.5-6.2 6.5-2.6 0-4.4-1.4-5.6-3.6L3.9 13.3a1.5 1.5 0 012.6-1.5L8 14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></symbol>
+  <symbol id="i-new" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 005 4.5v15A1.5 1.5 0 006.5 21h11a1.5 1.5 0 001.5-1.5V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3.5h11l3.5 3.5v12a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 19V5A1.5 1.5 0 015 3.5z"/><path d="M7.5 3.5v5h8v-5M7.5 20.5v-6h9v6"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M4 13.5V19a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 19v-5.5"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-zin" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M8 10.5h5M10.5 8v5"/></symbol>
+  <symbol id="i-zout" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20M8 10.5h5"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .7-1.5 1.2-1.5 2.5M12 17h.01"/></symbol>
+  <symbol id="i-lines" viewBox="0 0 24 24"><path d="M4 18c3-8 6-12 8-12s3 6 8 6"/></symbol>
+  <symbol id="i-flipH" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8.5 7L3.5 12l5 5z"/><path d="M15.5 7l5 5-5 5z"/></symbol>
+  <symbol id="i-flipV" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8.5L12 3.5l5 5z"/><path d="M7 15.5l5 5 5-5z"/></symbol>
+  <symbol id="i-rotL" viewBox="0 0 24 24"><path d="M4.5 5v5h5"/><path d="M5.2 13.5A7.5 7.5 0 106.3 7L4.5 10"/></symbol>
+  <symbol id="i-rotR" viewBox="0 0 24 24"><path d="M19.5 5v5h-5"/><path d="M18.8 13.5A7.5 7.5 0 1117.7 7l1.8 3"/></symbol>
+  <symbol id="i-dup" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0014.5 4h-9A1.5 1.5 0 004 5.5v9A1.5 1.5 0 005.5 16H8"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 12.5A1.5 1.5 0 008.5 21h7a1.5 1.5 0 001.5-1.5L18 7"/></symbol>
+  <symbol id="i-front" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1.5" fill="currentColor"/><rect x="4" y="4" width="11" height="11" rx="1.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="11" height="11" rx="1.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M4 4l16 16M9.5 6A9.8 9.8 0 0112 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 01-2.7 3.4M6.4 7.9A16 16 0 002.5 12S6 18.5 12 18.5a9 9 0 004-.9"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-group" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 012-2h4l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2h-13a2 2 0 01-2-2z"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 017.6-1.7"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M6 4v8a6 6 0 0012 0V4"/><path d="M6 4h3.5v8a2.5 2.5 0 005 0V4H18"/><path d="M6 8.5h3.5M14.5 8.5H18"/></symbol>
+  <symbol id="i-al" viewBox="0 0 24 24"><path d="M4 3v18"/><rect x="7" y="6" width="12" height="4" rx="1"/><rect x="7" y="14" width="7" height="4" rx="1"/></symbol>
+  <symbol id="i-ach" viewBox="0 0 24 24"><path d="M12 3v18"/><rect x="5" y="6" width="14" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/></symbol>
+  <symbol id="i-ar" viewBox="0 0 24 24"><path d="M20 3v18"/><rect x="5" y="6" width="12" height="4" rx="1"/><rect x="10" y="14" width="7" height="4" rx="1"/></symbol>
+  <symbol id="i-at" viewBox="0 0 24 24"><path d="M3 4h18"/><rect x="6" y="7" width="4" height="12" rx="1"/><rect x="14" y="7" width="4" height="7" rx="1"/></symbol>
+  <symbol id="i-acv" viewBox="0 0 24 24"><path d="M3 12h18"/><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/></symbol>
+  <symbol id="i-ab" viewBox="0 0 24 24"><path d="M3 20h18"/><rect x="6" y="5" width="4" height="12" rx="1"/><rect x="14" y="10" width="4" height="7" rx="1"/></symbol>
+  <symbol id="i-dh" viewBox="0 0 24 24"><path d="M3 4v16M21 4v16"/><rect x="9.5" y="7" width="5" height="10" rx="1"/></symbol>
+  <symbol id="i-dv" viewBox="0 0 24 24"><path d="M4 3h16M4 21h16"/><rect x="7" y="9.5" width="10" height="5" rx="1"/></symbol>
+  <symbol id="i-centre" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M9 4.5v15"/></symbol>
+  <symbol id="i-icons" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-shapes" viewBox="0 0 24 24"><circle cx="7.5" cy="7.5" r="4"/><path d="M16.5 3.5l4.5 8h-9z"/><rect x="4" y="14" width="7" height="7" rx="1"/><path d="M14 17.5c1.5-2.5 3.5 2.5 6 0"/></symbol>
+  <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 3.5v10M8 9.5l4 4 4-4"/><path d="M4 14.5v4A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-4"/></symbol>
+  <symbol id="i-drafts" viewBox="0 0 24 24"><path d="M8 3.5h8.5L20 7v11.5A1.5 1.5 0 0118.5 20H8a1.5 1.5 0 01-1.5-1.5v-13A1.5 1.5 0 018 3.5z"/><path d="M16.5 3.5V7H20M4 7v12.5A1.5 1.5 0 005.5 21H15"/></symbol>
+  <symbol id="i-update" viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.6"/><path d="M20 4v4.5h-4.5"/><path d="M12 8v4.5l3 2"/></symbol>
+  <symbol id="i-panelR" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M15 4.5v15"/></symbol>
+</svg>
+<div id="app">
+  <header>
+    <div class="brand"><svg class="i" aria-hidden="true"><use href="#i-brush"/></svg><span class="bt" translate="no">BG3 <b>Icon Editor</b></span></div>
+    <button class="btn icon" id="togLeft" aria-pressed="true" title="Library panel (Tab hides both panels)" aria-label="Library panel"><svg class="i"><use href="#i-panel"/></svg></button>
+    <span class="sep"></span>
+    <button class="btn" id="newDoc" title="New icon (Ctrl+Alt+N): opens a new tab"><svg class="i" aria-hidden="true"><use href="#i-new"/></svg><span class="bt">New</span></button>
+    <button class="btn" id="saveDraft" title="Save (Ctrl+S): saves this tab as a draft"><svg class="i" aria-hidden="true"><use href="#i-save"/></svg><span class="bt">Save</span></button>
+    <button class="btn primary" id="exportTop" title="Export (Ctrl+E): images and mod files"><svg class="i" aria-hidden="true"><use href="#i-export"/></svg><span class="bt">Export</span></button>
+    <span class="sep"></span>
+    <button class="btn icon" id="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
+    <button class="btn icon" id="redo" title="Redo (Ctrl+Shift+Z / Ctrl+Y)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+    <span class="grow"></span>
+    <label class="muted bt" for="bg">Background</label>
+    <select id="bg" title="Canvas background: check the glow on light and dark backgrounds">
+      <option value="dark">Hotbar dark</option><option value="black">Black</option><option value="grey">Mid grey</option>
+      <option value="light">Light</option><option value="white">White</option><option value="check">Checkerboard</option>
+    </select>
+    <button class="btn icon" id="lineView" aria-pressed="false" title="Line art view (Ctrl+L): the drawing without colour or glow" aria-label="Line art view"><svg class="i"><use href="#i-lines"/></svg></button>
+    <button class="btn icon" id="snapBtn" aria-pressed="true" title="Snapping (Ctrl+Shift+;): line up with the page and other strokes while moving. Hold Ctrl to move freely" aria-label="Snapping"><svg class="i"><use href="#i-magnet"/></svg></button>
+    <span class="sep"></span>
+    <button class="btn icon" id="zoomOut" title="Zoom out (Ctrl+-)" aria-label="Zoom out"><svg class="i"><use href="#i-zout"/></svg></button>
+    <button class="btn" id="zoomv" title="Zoom (Ctrl+0): click to fit the window · Ctrl+1: 100%">100%</button>
+    <button class="btn icon" id="zoomIn" title="Zoom in (Ctrl+=)" aria-label="Zoom in"><svg class="i"><use href="#i-zin"/></svg></button>
+    <button class="btn icon" id="zoomFit" title="Fit to window (Ctrl+0)" aria-label="Fit to window"><svg class="i"><use href="#i-fit"/></svg></button>
+    <span class="sep"></span>
+    <button class="btn icon" id="togRight" aria-pressed="true" title="Side panels (Tab hides both panels)" aria-label="Side panels"><svg class="i"><use href="#i-panelR"/></svg></button>
+    <button class="btn" id="updBtn" hidden title="Update available: see what's new and install it"><svg class="i" aria-hidden="true"><use href="#i-update"/></svg><span class="bt" id="updBtnT">Update</span></button>
+    <button class="btn icon" id="helpBtn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg class="i"><use href="#i-help"/></svg></button>
+  </header>
+  <div id="opts" role="toolbar" aria-label="Tool options"></div>
+  <nav id="rail" role="toolbar" aria-orientation="vertical" aria-label="Tools">
+    <button class="btn" data-tool="select" data-key="V" title="Move (V): drag to move, corners to scale, the top dot to rotate · Alt-drag copies" aria-label="Move tool"><svg class="i"><use href="#i-select"/></svg></button>
+    <button class="btn" data-tool="node" data-key="A" title="Edit points (A): reshape lines and pen paths" aria-label="Edit points tool"><svg class="i"><use href="#i-node"/></svg></button>
+    <div class="gap"></div>
+    <button class="btn" data-tool="brush" data-key="B" title="Brush (B): draw freehand" aria-label="Brush tool"><svg class="i"><use href="#i-brush"/></svg></button>
+    <button class="btn" data-tool="line" data-key="L" title="Line (L): Shift snaps to 15°" aria-label="Line tool"><svg class="i"><use href="#i-line"/></svg></button>
+    <button class="btn" data-tool="ellipse" data-key="U" title="Ellipse (U): Shift draws a circle, Alt draws from the centre" aria-label="Ellipse tool"><svg class="i"><use href="#i-ellipse"/></svg></button>
+    <button class="btn" data-tool="pen" data-key="P" title="Pen (P): click to add points, Enter to finish" aria-label="Pen tool"><svg class="i"><use href="#i-pen"/></svg></button>
+    <div class="gap"></div>
+    <button class="btn" data-tool="eraser" data-key="E" title="Eraser (E): erase parts of strokes or whole strokes" aria-label="Eraser tool"><svg class="i"><use href="#i-eraser"/></svg></button>
+    <button class="btn" data-tool="hand" data-key="H" title="Hand (H): pan the view · or hold Space in any tool" aria-label="Hand tool"><svg class="i"><use href="#i-hand"/></svg></button>
+  </nav>
+  <aside id="left" aria-label="Library">
+    <div class="tabs" role="tablist" aria-label="Library">
+      <button role="tab" id="tabIcons" aria-selected="true" aria-controls="grid" title="Icons: the game's spell, action and illithid power icons"><svg class="i" aria-hidden="true"><use href="#i-icons"/></svg><span>Icons</span></button>
+      <button role="tab" id="tabParts" aria-selected="false" aria-controls="grid" title="Shapes: damage symbols, figures, frames and other pieces cut from the game's icons"><svg class="i" aria-hidden="true"><use href="#i-shapes"/></svg><span>Shapes</span></button>
+      <button role="tab" id="tabMine" aria-selected="false" aria-controls="grid" title="Imported: icons from your own mods, ready to edit and export again"><svg class="i" aria-hidden="true"><use href="#i-import"/></svg><span>Imported</span></button>
+      <button role="tab" id="tabDrafts" aria-selected="false" aria-controls="grid" title="Drafts: drawings you saved"><svg class="i" aria-hidden="true"><use href="#i-drafts"/></svg><span>Drafts</span></button>
+    </div>
+    <div id="libTools"></div>
+    <input type="file" id="impFiles" multiple accept=".png,.dds,.tga,.webp,.jpg,.jpeg" hidden><input type="file" id="impDir" webkitdirectory hidden>
+    <div class="muted" id="gridHint"></div>
+    <div id="grid" role="list" aria-label="Library items"></div>
+  </aside>
+  <div class="split" id="splitL" role="separator" aria-orientation="vertical" aria-label="Resize the library" title="Drag or arrow keys: resize · double-click or Backspace: default width" tabindex="0"></div>
+  <nav id="docTabs" role="tablist" aria-label="Open icons"></nav>
+  <main id="vp" tabindex="0" aria-label="Canvas. Use the tools on the left; arrow keys nudge the selection.">
+    <div id="stage" class="bg-dark"><canvas id="gl" aria-hidden="true"></canvas><canvas id="art" width="512" height="512" aria-hidden="true"></canvas></div>
+    <canvas id="overlay" aria-hidden="true"></canvas>
+    <div id="empty" hidden><b>Start an icon</b><br>Open an icon or add a shape from the library, or draw with the tools on the left. Press <kbd>?</kbd> for shortcuts.</div>
+  </main>
+  <div class="split" id="splitR" role="separator" aria-orientation="vertical" aria-label="Resize the panels" title="Drag or arrow keys: resize · double-click or Backspace: default width" tabindex="0"></div>
+  <aside id="right" aria-label="Panels">
+    <div id="dockTop">
+      <details class="pn" open id="pnProps"><summary>Properties</summary><div class="body" id="props"></div></details>
+      <details class="pn" open id="pnSpell"><summary>Spell</summary><div class="body">
+        <div class="grid2">
+          <div><label class="f" for="kind">Kind</label><select id="kind"><option>Spell</option><option>Action</option><option value="Illithid">Illithid power</option></select></div>
+          <div><label class="f" for="intent">Intent</label><select id="intent"></select></div>
+        </div>
+        <label class="f" for="name">Name</label><input id="name" type="text" value="New Icon" style="width:100%">
+        <label class="f" for="iconKey" title="The icon's name in the game files, which your mod's spells refer to. Leave empty to use Mod_Kind_Name">Name in the game</label><input id="iconKey" type="text" placeholder="Auto: Mod_Kind_Name" spellcheck="false" style="width:100%">
+        <div class="grid2">
+          <div><label class="f" for="damage">Damage type</label><select id="damage"></select></div>
+          <div id="sourceBox"><label class="f" for="source">Source</label><select id="source"></select></div>
+        </div>
+        <label class="f" id="colourLbl">Colour</label>
+        <div class="chosen"><span class="bar" id="colourBar"></span><span id="colourName"></span></div>
+        <div class="swatches" id="colour" role="group" aria-labelledby="colourLbl"></div>
+        <div id="frameBox"><label class="f" for="frame">Hotbar frame</label><select id="frame" style="width:100%"></select></div>
+        <label class="f" id="secondLbl">Second colour</label>
+        <div class="chosen"><span class="bar" id="secondBar"></span><span id="secondName"></span></div>
+        <div class="swatches" id="second" role="group" aria-labelledby="secondLbl"></div>
+      </div></details>
+    </div>
+    <div class="hsplit" id="splitLayers" role="separator" aria-orientation="horizontal" aria-label="Resize the layers panel" title="Drag or arrow keys: resize · double-click or Backspace: default height" tabindex="0"></div>
+    <section id="pnLayers" aria-labelledby="layersHead">
+      <h2 class="pnh" id="layersHead">Layers <span class="count" id="layerCount"></span></h2>
+      <ul id="layers" role="listbox" aria-label="Strokes, top first" aria-multiselectable="true"></ul>
+      <div class="muted lhint">Drag to reorder · Ctrl+G to group</div>
+    </section>
+    <details class="pn" open id="pnGame"><summary>In game</summary><div class="body">
+      <div class="previews">
+        <figure><canvas id="ctrl" width="144" height="144"></canvas>Controller</figure>
+        <figure><img id="hot" alt="Hotbar preview">Hotbar</figure>
+        <figure><canvas id="tip" width="380" height="380"></canvas>Tooltip</figure>
+      </div>
+    </div></details>
+  </aside>
+  <footer id="statusbar"><span id="status" role="status" aria-live="polite">Loading…</span><span id="coords" translate="no"></span><span id="perf"></span></footer>
+</div>
+<dialog id="updateDlg" aria-labelledby="updTitle">
+  <h2 id="updTitle">Update available</h2>
+  <p class="muted" id="updText"></p>
+  <div id="updNotes"></div>
+  <p class="muted" id="updState" aria-live="polite" style="margin:10px 0 0">Your open tabs are saved first and come back after the restart. Your drafts, colours, imported icons and exports are kept.</p>
+  <div class="row xact"><button class="btn" id="updLater">Later</button><button class="btn primary" id="updGo">Update and restart</button></div>
+</dialog>
+<dialog id="unsavedDlg" aria-labelledby="usTitle">
+  <h2 id="usTitle">Save changes?</h2>
+  <p class="muted" id="usText"></p>
+  <div id="usList"></div>
+  <div class="row xact"><button class="btn" id="usDiscard">Don't save</button><span class="grow"></span><button class="btn" id="usCancel">Cancel</button><button class="btn primary" id="usSave">Save</button></div>
+</dialog>
+<dialog id="colourDlg" aria-labelledby="cdTitle">
+  <h2 id="cdTitle">Custom colour</h2>
+  <p class="muted" id="cdHow"></p>
+  <div class="cdramp" id="cdRamp" aria-hidden="true"></div>
+  <div class="row" id="cdStops" role="group" aria-label="Colours"></div>
+  <label class="f" for="cdName">Name</label><input id="cdName" type="text" placeholder="For example: Shadow teal" style="width:100%">
+  <p class="muted" style="margin:8px 0 0">The canvas previews the colour as you pick. Saved colours appear in every icon's colour list.</p>
+  <form method="dialog" class="row xact"><button class="btn" value="cancel">Cancel</button><button class="btn primary" type="button" id="cdSave">Save colour</button></form>
+</dialog>
+<dialog id="help" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">Keyboard and mouse</h2>
+  <div class="hgrid">
+    <section><h3>Tools</h3><table>
+      <tr><td><kbd>V</kbd></td><td>Move</td></tr>
+      <tr><td><kbd>A</kbd></td><td>Edit points of a line or path</td></tr>
+      <tr><td><kbd>B</kbd> <kbd>L</kbd> <kbd>U</kbd> <kbd>P</kbd></td><td>Brush, line, ellipse, pen</td></tr>
+      <tr><td><kbd>E</kbd></td><td>Eraser</td></tr>
+      <tr><td><kbd>H</kbd> · hold <kbd>Space</kbd></td><td>Pan (or drag with the middle mouse button)</td></tr>
+    </table></section>
+    <section><h3>Drawing</h3><table>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Brush / eraser size</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>Line: snap to 15° · ellipse: circle</td></tr>
+      <tr><td><kbd>Alt</kbd></td><td>Pen: corner point · ellipse: from the centre</td></tr>
+      <tr><td><kbd>Enter</kbd> · double-click</td><td>Finish a pen path; click its first point to close</td></tr>
+      <tr><td><kbd>Backspace</kbd> · <kbd>Esc</kbd></td><td>Pen: remove the last point · cancel</td></tr>
+    </table></section>
+    <section><h3>Selection</h3><table>
+      <tr><td><kbd>Shift</kbd>-click</td><td>Add or remove a stroke · drag on empty space to select with a box</td></tr>
+      <tr><td><kbd>Alt</kbd>-drag</td><td>Copy while moving</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>A</kbd> · <kbd>Ctrl</kbd><kbd>D</kbd></td><td>Select all · none</td></tr>
+      <tr><td>Arrows</td><td>Nudge 1 px · <kbd>Shift</kbd> 10 px</td></tr>
+      <tr><td><kbd>Del</kbd></td><td>Delete (or the point being edited)</td></tr>
+      <tr><td>Right-click</td><td>Menu for the stroke under the cursor</td></tr>
+    </table></section>
+    <section><h3>Transform and arrange</h3><table>
+      <tr><td><kbd>Shift</kbd><kbd>H</kbd> · <kbd>Shift</kbd><kbd>V</kbd></td><td>Flip horizontally · vertically</td></tr>
+      <tr><td><kbd>Q</kbd> · <kbd>W</kbd></td><td>Rotate −15° · +15°</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>J</kbd></td><td>Duplicate</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>G</kbd> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>G</kbd></td><td>Group · ungroup (double-click a group to edit inside it, <kbd>Esc</kbd> to leave)</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>]</kbd> · <kbd>Ctrl</kbd><kbd>[</kbd></td><td>Forward · backward; with <kbd>Shift</kbd>: front · back</td></tr>
+      <tr><td><kbd>X</kbd></td><td>Switch between main and second colour</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>;</kbd></td><td>Snapping on or off</td></tr>
+      <tr><td><kbd>Ctrl</kbd> while dragging</td><td>Move or scale without snapping</td></tr>
+      <tr><td>Properties · Align</td><td>Align, space evenly, centre on the page</td></tr>
+    </table></section>
+    <section><h3>View</h3><table>
+      <tr><td><kbd>Ctrl</kbd>+wheel</td><td>Zoom at the cursor · wheel pans</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>0</kbd> · <kbd>Ctrl</kbd><kbd>1</kbd></td><td>Fit · 100%</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>=</kbd> · <kbd>Ctrl</kbd><kbd>-</kbd></td><td>Zoom in · out</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>L</kbd></td><td>Line art view</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>Hide / show both panels</td></tr>
+    </table></section>
+    <section><h3>Edit and files</h3><table>
+      <tr><td><kbd>Ctrl</kbd><kbd>Z</kbd> · <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></td><td>Undo · redo (also <kbd>Ctrl</kbd><kbd>Y</kbd>)</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>S</kbd> · <kbd>Ctrl</kbd><kbd>E</kbd></td><td>Save draft · export</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>N</kbd> · <kbd>W</kbd> · <kbd>T</kbd></td><td>New tab · close tab · reopen a closed tab</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></td><td>Save all tabs</td></tr>
+      <tr><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>←</kbd> <kbd>→</kbd></td><td>Previous · next tab</td></tr>
+      <tr><td>Tabs</td><td>Double-click renames · drag reorders · <kbd>Ctrl</kbd>-click selects several · right-click: save or close several</td></tr>
+    </table></section>
+    <section><h3>Sliders and fields</h3><table>
+      <tr><td>Drag a name</td><td>Adjust the value · <kbd>Shift</kbd> faster · <kbd>Alt</kbd> finer</td></tr>
+      <tr><td>Type · <kbd>Enter</kbd></td><td>Set an exact value · <kbd>Esc</kbd> cancels</td></tr>
+      <tr><td>Double-click</td><td>Reset a slider or panel width</td></tr>
+    </table></section>
+    <section><h3>Library</h3><table>
+      <tr><td>Click</td><td>Open an icon in a new tab</td></tr>
+      <tr><td><kbd>Shift</kbd>-click · drag</td><td>Add it to the open icon</td></tr>
+      <tr><td>Right-click a shape</td><td>Hide it or change its category</td></tr>
+      <tr><td>Shapes · Damage</td><td>The game's damage symbols (sets the damage type if empty)</td></tr>
+      <tr><td>Arrow keys on the tabs</td><td>Icons · Shapes · Imported · Drafts</td></tr>
+    </table></section>
+  </div>
+  <form method="dialog" class="hfoot"><span class="muted">Hover any control for its name and shortcut. Other languages: use your browser's Translate (Firefox: the translate icon in the address bar; Chrome and Edge: right-click › Translate).<br>
+    <span id="verLine" translate="no"></span> · <label><input type="checkbox" id="updAuto"> Check for updates</label></span><button class="btn primary">Close</button></form>
+</dialog>
+<dialog id="exportDlg" aria-labelledby="exportTitle">
+  <h2 id="exportTitle">Export</h2>
+  <div class="xgrid">
+    <section class="xcard" aria-labelledby="xImgH">
+      <h3 id="xImgH">Image</h3>
+      <p class="muted">A single image to share or use elsewhere.</p>
+      <div class="xprev"><img id="xPrev" alt="Preview of the image"><span id="xInfo" class="muted"></span></div>
+      <label class="f" id="xLookL">Look</label>
+      <div class="seg" role="group" aria-labelledby="xLookL" id="xLook">
+        <button class="btn" data-look="icon" title="The icon with its glow">Icon</button>
+        <button class="btn" data-look="tooltip" title="As in the tooltip, faded at the bottom">Tooltip</button>
+        <button class="btn" data-look="hotbar" title="The PC hotbar slot with its frame (64 px, enlarged)">Hotbar</button>
+        <button class="btn" data-look="lineart" title="The drawing without colour or glow">Line art</button>
+      </div>
+      <label class="f" for="xSize">Size (px)</label>
+      <div class="row xsizes"><input id="xSize" type="number" min="16" max="2048" step="1" value="512">
+        <div class="chips" id="xSizes" role="group" aria-label="Common sizes"></div></div>
+      <label class="f" id="xBgL">Background</label>
+      <div class="row"><div class="seg" role="group" aria-labelledby="xBgL" id="xBg">
+        <button class="btn" data-bg="transparent">None</button><button class="btn" data-bg="dark">Hotbar dark</button>
+        <button class="btn" data-bg="black">Black</button><button class="btn" data-bg="white">White</button></div>
+        <input type="color" id="xBgC" value="#2a2622" aria-label="Custom background colour" title="Any other background colour"></div>
+      <label class="f" id="xFmtL">File</label>
+      <div class="seg" role="group" aria-labelledby="xFmtL" id="xFmt">
+        <button class="btn" data-fmt="png" title="PNG: opens everywhere">PNG</button>
+        <button class="btn" data-fmt="webp" title="WebP: the same quality in a file about 40% smaller">WebP (smaller)</button></div>
+      <div class="row xact"><button class="btn" id="xCopy"><svg class="i" aria-hidden="true"><use href="#i-dup"/></svg>Copy image</button>
+        <button class="btn primary" id="xDown"><svg class="i" aria-hidden="true"><use href="#i-export"/></svg><span id="xDownT">Download PNG</span></button></div>
+    </section>
+    <section class="xcard" aria-labelledby="xModH">
+      <h3 id="xModH">Mod files</h3>
+      <p class="muted">Saved to <code id="xDir" translate="no">outputs/editor/MyIcons/</code>. The mod includes every icon exported to it.</p>
+      <label class="f" for="mod">Mod name</label><input id="mod" type="text" value="MyIcons" style="width:100%">
+      <label class="chk"><input type="checkbox" id="xGame" checked><span>Game files (textures and mod data, ready to pack)</span></label>
+      <label class="chk"><input type="checkbox" id="xPngs" checked><span>PNG images: icon, tooltip and hotbar</span></label>
+      <div class="row xsub"><label class="muted" for="pngSize">and also at</label><select id="pngSize">
+        <option value="512">512 only</option><option value="1024">1024</option><option value="2048">2048</option></select></div>
+      <label class="chk"><input type="checkbox" id="xLine" checked><span>Line art (without colour or glow)</span></label>
+      <div class="row xact"><button class="btn" id="exportAll" title="Export every open tab, each under its own name"><svg class="i" aria-hidden="true"><use href="#i-export"/></svg><span id="exportAllT">Export all tabs</span></button><button class="btn primary" id="export"><svg class="i" aria-hidden="true"><use href="#i-export"/></svg>Export this icon</button></div>
+      <div id="result" aria-live="polite"></div>
+    </section>
+  </div>
+  <form method="dialog" class="hfoot"><span class="muted">Large sizes are drawn sharp: vector strokes at full detail, game strokes enlarged and sharpened to match.</span><button class="btn">Close</button></form>
+</dialog>
+<script type="module" src="editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BG3 Icon Generator</title>
+<style>
+  :root { --bg:#14161a; --card:#1d2026; --ink:#e8e6e1; --mute:#8d929b; --done:#3fb56b; --now:#4c9bff; --later:#4a4f58; --line:#2c3038; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 16px; background:var(--bg); color:var(--ink); font:15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  main { max-width:980px; margin:0 auto; }
+  h1 { margin:0; font-size:22px; letter-spacing:.3px; }
+  .purpose { color:var(--mute); margin:2px 0 18px; }
+  .now { font-size:26px; font-weight:650; margin:0 0 4px; }
+  .now b { color:var(--now); }
+  .meta { color:var(--mute); font-size:13px; margin-bottom:26px; }
+  .meta code { color:var(--ink); }
+  .road { display:flex; flex-wrap:wrap; gap:18px 0; margin:0 0 28px; padding:0; list-style:none; }
+  .road li { flex:1 0 96px; text-align:center; position:relative; font-size:13px; color:var(--mute); }
+  .road li::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:2px; background:var(--line); z-index:0; }
+  .road li:first-child::before { display:none; }
+  .dot { position:relative; z-index:1; display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--later); color:#fff; font-size:13px; margin-bottom:6px; }
+  .done .dot { background:var(--done); }
+  .now-step .dot { background:var(--now); box-shadow:0 0 0 5px rgba(76,155,255,.25), 0 0 16px rgba(76,155,255,.8); }
+  .done, .now-step { color:var(--ink); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .card h2 { margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:1px; color:var(--mute); }
+  .card ul { margin:0; padding-left:20px; }
+  .card li { margin:4px 0; }
+  .turn ul { list-style:none; padding-left:0; }
+  .turn li::before { content:"\2610  "; color:var(--now); }
+  .chips { margin:22px 0 0; display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--mute); font-size:13px; }
+  .chip { border:1px solid var(--line); border-radius:99px; padding:3px 11px; }
+  footer { margin-top:22px; font-size:13px; color:var(--mute); }
+  footer a { color:var(--now); }
+</style>
+</head>
+<body>
+<main>
+  <h1>BG3 Icon Generator</h1>
+  <p class="purpose">Fill in a spell's details, get a Larian-style icon plus every in-game version of it.</p>
+  <p class="now">Now: <b>Model tests done: the editor is the way</b>; your editor notes fixed, ready to try</p>
+  <p class="meta">2026-10-18 · branch <code>phase-7-editor</code> · last commit <code>see git log</code></p>
+
+  <ol class="road">
+    <li class="done"><span class="dot">&#10003;</span><br>Research</li>
+    <li class="done"><span class="dot">&#10003;</span><br>Dataset</li>
+    <li class="done"><span class="dot">&#10003;</span><br>Icon rules</li>
+    <li class="done"><span class="dot">&#10003;</span><br>Exporter</li>
+    <li class="done"><span class="dot">&#10003;</span><br>Captions</li>
+    <li><span class="dot">5</span><br>Model test</li>
+    <li><span class="dot">6</span><br>Training</li>
+    <li class="now-step"><span class="dot">7</span><br>App (editor)</li>
+    <li><span class="dot">8</span><br>Release</li>
+  </ol>
+
+  <div class="cards">
+    <section class="card">
+      <h2>Doing now</h2>
+      <ul>
+        <li>Training v2 scored on the 92 test icons: no inverted icons from checkpoint 10,000 on, no copies of training icons, more gestural strokes than v1; 10,000 and 12,000 are the best two</li>
+        <li>Blind test 3: all 24 spotted. The model never reuses the game's shared parts (Divine Strike's sword), and busy prompts lose their main object: building from game parts first (already decided) is the fix</li>
+        <li>Draft test: given a draft made of game parts, the model keeps the game's drawing, but only by copying the draft; whole game-part drafts can ship straight from code</li>
+        <li>Fill test: keep the game's frame or shared part, erase the rest, and the model draws the prompt's object there (a trident in the Pact hand, Hex's book) about as well as the game's own variants match each other (decided: that is the model's job in the editor)</li>
+        <li>Planner test: a small language model plans each icon from game parts plus areas to draw. It often leaves out the main object, so it does no better than drawing from text alone yet; you spotted all 11 in blind test 4</li>
+        <li>Your notes are in: game-like rough strokes you can still edit afterwards, crossings merge, eraser, pen with corners</li>
+        <li>Photoshop-style layout: tools, layers, properties, zoom, light backgrounds, resizable panels, drafts that autosave</li>
+        <li>Vague parts hidden (right-click hides more); PNGs up to 2048 with sharp brush strokes</li>
+      </ul>
+    </section>
+    <section class="card turn">
+      <h2>Your turn</h2>
+      <ul>
+        <li>Your 4 editor notes are fixed: the panel hide button collapses the whole panel; double-click a slider (or press Backspace on it) to reset it; long freehand strokes stay smooth; a polish pass</li>
+        <li>Second round: drawing is ~4x faster again (about 2 ms a frame on any stroke length), and the editor now works like Photoshop / Affinity: drag a slider's name to change it, type exact values, tooltips show shortcuts, right-click menu on the canvas, stroke thumbnails in Layers, size and zoom shown on the canvas, a grouped shortcuts sheet (?)</li>
+        <li>Snapping: moved or resized strokes line up with the page, with each other and with equal gaps (pink guides; magnet button to switch it off). Align, space evenly and centre on the page are in Properties</li>
+        <li>Drawing in Firefox (your browser) is now exactly as smooth as just moving the mouse; it was running at half the frame rate</li>
+        <li>Parts: the game's damage-type symbols have their own section, every part is shown in colour, and parts are sorted into categories (right-click a part to move it or hide it)</li>
+        <li>Your latest notes are in: clearer tools, Layers no longer pushes the other panels, align buttons along the top, nicer colour swatches, an Export window that can copy or save just one image, and parts that show the whole drawn element (Glyph of Warding's full rune)</li>
+        <li>Your newest notes: a start-up screen instead of a half-drawn page and the same address every run (your layout is kept); option buttons without seams; one-click category chips and a search for parts; parts without stray bits (Arcane Lock's frame without the lock, the heart and the acid spew cleaned, the frame with a missing corner merged); big exports about 4x faster with an optional WebP file about 40% smaller; layer groups (Ctrl+G); the glow fades out at the image edge instead of being cut</li>
+        <li>Now building your next notes: tabs (several icons open at once, export all) and custom colours (one colour or your own gradient) and bulk import of existing icons (faded tooltips rebuilt, own colours kept, original names kept) are in; strokes become editable vectors wherever the look stays the same (optional on import); strokes can be made thornier or smoother like the game's spells (thorny) and actions (smooth), with barbs shaped like the game's: splinters that flow one way along the stroke; clearer library and tab names with icons, saving and closing several tabs at once, plainer wording, and other languages through the browser's Translate; big exports keep game strokes as sharp as drawn ones; the app can update itself from published releases (where to publish is your call); converted strokes hold up at 2048 (no boxy ends or hairlines, softer thorns); a double-click launcher sets up its own Python and restarts after an update (Windows tested); releases go on GitHub (your repository is connected, nothing pushed yet); the game's icons ship as a one-time download with a notice crediting Larian and Wizards, tested from a fresh install</li>
+        <li>Run <code>anaconda3\python.exe -m iconkit.editor</code> and try it: press Export and copy the icon, open Parts and add the Glyph rune, add lots of strokes and watch Layers stay put</li>
+        <li>Send notes: what still feels wrong or missing</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="chips">Later in the editor: <span class="chip">Element symbols</span><span class="chip">Based on series</span><span class="chip">Model as a guide</span> After v1: <span class="chip">Passives</span><span class="chip">Class icons</span><span class="chip">Items</span></div>
+  <footer>Details: <a href="implementation-plan.md">implementation-plan.md</a></footer>
+</main>
+</body>
+</html>

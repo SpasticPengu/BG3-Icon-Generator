@@ -1,0 +1,93 @@
+# 5.3 v2 all-kinds LoRA (D39): v1 (klein4b_all.yaml) run 4 passes instead of 0.7 (blind test: 21 and 24 of 24 told apart), all kinds (iconkit.trainset build outputs/trainset_all), 512 px,
+# fp8 base + fp8 text encoder, text embeddings cached (encoder unloaded while training), checkpoint + samples every 2000
+# steps (5.3 scores every checkpoint). Run: tools/ai-toolkit/venv/Scripts/python.exe train/run_aitk.py train/klein4b_all_v2.yaml
+job: extension
+config:
+  name: klein4b_all_v2
+  process:
+    - type: diffusion_trainer
+      training_folder: "{ROOT}/outputs/lora"
+      device: cuda
+      trigger_word: null
+      performance_log_every: 50
+      network:
+        type: lora
+        linear: 32
+        linear_alpha: 32
+      save:
+        dtype: bf16
+        save_every: 2000
+        max_step_saves_to_keep: 9
+        save_format: diffusers
+        push_to_hub: false
+      datasets:
+        # one entry per repeat folder: D27 + D33 weights as repeats (trainset.R = 6)
+        - &ds
+          folder_path: "{ROOT}/outputs/trainset_all/r1"
+          caption_ext: txt
+          caption_dropout_rate: 0.05
+          cache_latents_to_disk: true
+          resolution: [512]
+          num_repeats: 1
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_all/r2"
+          num_repeats: 2
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_all/r3"
+          num_repeats: 3
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_all/r4"
+          num_repeats: 4
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_all/r6"
+          num_repeats: 6
+      train:
+        batch_size: 1
+        steps: 16500
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: flowmatch
+        timestep_type: weighted
+        optimizer: adamw8bit
+        optimizer_params:
+          weight_decay: 0.0001
+        lr: 0.0001
+        cache_text_embeddings: true
+        unload_text_encoder: false
+        dtype: bf16
+        loss_type: mse
+      model:
+        arch: flux2_klein_4b
+        name_or_path: "{ROOT}/models/FLUX.2-klein-base-4B"
+        quantize: true
+        qtype: qfloat8
+        quantize_te: true
+        qtype_te: qfloat8
+        low_vram: true
+        model_kwargs:
+          match_target_res: false
+      sample:
+        sampler: flowmatch
+        sample_every: 2000
+        width: 512
+        height: 512
+        guidance_scale: 4
+        sample_steps: 25
+        seed: 42
+        walk_seed: false
+        samples:
+          # hold-out captions (data/holdout.txt): 2 spells, 3 actions (one frame family), 1 illithid power
+          - prompt: "bg3 spell icon, healing, a round-bottomed flask with two curling handles at its neck, symmetric."
+          - prompt: "bg3 spell icon, damage, cold damage, a large spiky snowflake with dashed streaks flying from the left."
+          - prompt: "bg3 action icon, monster, damage, piercing damage, a bull-headed minotaur charging to the right with head lowered and long horns, speed strokes at the left."
+          - prompt: "bg3 action icon, basic action, a figure sprinting to the right with long legs in full stride, diagonal."
+          - prompt: "bg3 action icon, paladin, buff, a shield with a pointed base inside a notched octagonal frame, symmetric."
+          - prompt: "bg3 illithid power icon, a ring struck through by a long thorny shaft pointing down-left."
+          # objects no motif names (5.3 unseen-objects test)
+          - prompt: "bg3 spell icon, utility, an old lantern with a flame inside, upright, symmetric."
+          - prompt: "bg3 action icon, weapon action, damage, weapon damage, an anvil struck by a hammer, sparks flying up, diagonal."
+meta:
+  name: klein4b_all_v2
+  version: "1.0"

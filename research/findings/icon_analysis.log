@@ -1,0 +1,117 @@
+[1] stats entries: 9423 [('SpellData', 3322), ('StatusData', 2340), ('Object', 1152), ('PassiveData', 977), ('Character', 737), ('Armor', 397), ('Weapon', 285), ('InterruptData', 212)]
+[2] icons to analyse: 1837 (controller files 1522, atlas keys 1834)
+    ... 0/1837
+    ... 400/1837
+    ... 800/1837
+    ... 1200/1837
+    ... 1600/1837
+[3] wrote <scratchpad>\icons.csv rows=1837; with stats=1283
+
+== SPELL icons: VerbalIntent -> glyph hue
+  Damage                       n= 256  red 36%, orange 24%, blue 14%, green 10%, gold 4%
+  Utility                      n= 182  blue 72%, orange 12%, red 6%, achromatic 5%, cyan 3%
+  Buff                         n= 124  orange 66%, blue 10%, red 7%, cyan 5%, achromatic 3%
+  Control                      n=  87  red 67%, orange 14%, blue 8%, cyan 3%, magenta 2%
+  Summon                       n=  66  orange 90%, blue 4%, cyan 3%, gold 1%
+  Debuff                       n=  49  magenta 77%, orange 8%, red 8%, green 2%, blue 2%
+  Healing                      n=  33  cyan 78%, achromatic 12%, gold 3%, orange 3%, blue 3%
+
+== DAMAGE spells: DamageType -> glyph hue
+  Bludgeoning                  n=  53  orange 50%, red 26%, blue 9%, green 5%, achromatic 3%
+  Fire                         n=  22  orange 86%, red 13%
+  Cold                         n=  15  blue 93%, cyan 6%
+  Lightning                    n=  14  blue 100%
+  Necrotic                     n=  13  green 76%, achromatic 7%, gold 7%, violet 7%
+  Radiant                      n=  11  gold 81%, orange 9%, blue 9%
+  Psychic                      n=   9  magenta 77%, orange 11%, red 11%
+  Piercing                     n=   8  red 62%, orange 37%
+  Poison                       n=   7  green 57%, red 28%, orange 14%
+  Force                        n=   7  red 100%
+  Thunder                      n=   7  violet 85%, blue 14%
+  Slashing                     n=   6  orange 66%, red 33%
+  Acid                         n=   6  green 100%
+
+== SPELL icons: SpellSchool -> glyph hue
+  Evocation                    n=  77  orange 32%, blue 22%, cyan 10%, gold 10%, violet 7%
+  Conjuration                  n=  59  orange 52%, blue 18%, red 18%, green 6%, gold 3%
+  Abjuration                   n=  50  orange 56%, red 18%, blue 14%, cyan 6%, achromatic 2%
+  Transmutation                n=  48  orange 45%, blue 37%, red 16%
+  Illusion                     n=  47  blue 82%, red 6%, magenta 6%, orange 4%
+  Enchantment                  n=  36  red 55%, magenta 30%, orange 11%, achromatic 2%
+  Necromancy                   n=  35  magenta 37%, green 22%, orange 20%, red 5%, cyan 5%
+  None                         n=  20  orange 20%, green 20%, blue 20%, red 15%, violet 10%
+  Divination                   n=  11  blue 54%, magenta 27%, orange 9%, cyan 9%
+
+== icon prefix -> glyph hue
+  Action                       n= 553  orange 38%, red 24%, blue 17%, cyan 5%, achromatic 5%
+  Spell                        n= 446  orange 29%, blue 26%, red 17%, magenta 12%, cyan 4%
+  PassiveFeature               n= 330  blue 83%, orange 6%, red 2%, magenta 2%, cyan 2%
+  Surface                      n=  48  orange 22%, blue 20%, achromatic 20%, red 12%, green 10%
+  Skill                        n=  47  blue 59%, red 19%, orange 12%, cyan 8%
+  TadpoleSuperPower            n=  42  red 76%, achromatic 19%, blue 4%
+  statIcons                    n=  25  blue 84%, achromatic 12%, orange 4%
+  GenericIcon                  n=  18  green 16%, blue 16%, orange 16%, red 16%, violet 11%
+  PassiveAction                n=   9  red 100%
+
+== icon prefix -> hotbar background (nearest of 28)
+  Action                       n= 574  radiance 20%, control 14%, metaMagic 11%, monster 10%, action 8%
+  Spell                        n= 445  spell 100%
+  PassiveFeature               n= 330  utilityPassive 81%, actionPassive 3%, damagePassive 2%, heaingPassive 2%, debuffPassive 2%
+  statIcons                    n= 246  nonElementalResistancePassive 68%, spell 11%, metaMagic 5%, summon 3%, fireDamage 2%
+  Status                       n=  64  nonElementalResistancePassive 43%, summon 20%, spell 18%, weaponAction 6%, fireDamage 4%
+  Skill                        n=  50  metaMagic 40%, monster 26%, bonusAction 14%, buff 4%, heal 4%
+  Surface                      n=  48  summon 16%, weaponBonusAction 16%, spell 12%, control 10%, metaMagic 8%
+  TadpoleSuperPower            n=  43  tadpole 76%, nonElementalResistancePassive 13%, utilityPassive 9%
+  GenericIcon                  n=  18  control 22%, radiance 16%, monster 16%, buff 11%, utility 11%
+  PassiveAction                n=  10  control 50%, action 20%, weaponAction 10%, summon 10%, metaMagic 10%
+
+== PASSIVE icons: glyph hue -> hotbar background
+  blue                         n= 274  utilityPassive 98%, coldDamagePassive 1%, heaingPassive 0%
+  orange                       n=  22  actionPassive 45%, buffPassive 36%, fireDamagePassive 18%
+  red                          n=   9  damagePassive 100%
+  magenta                      n=   8  debuffPassive 100%
+  cyan                         n=   7  heaingPassive 100%
+  achromatic                   n=   3  nonElementalResistancePassive 66%, heaingPassive 33%
+  green                        n=   3  necroDamagePassive 66%, actionPassive 33%
+  pink                         n=   3  controlPassive 100%
+
+== Spell_/Action_ icons: VerbalIntent -> hotbar background
+  Damage                       n= 230  spell 39%, radiance 15%, control 14%, weaponAction 6%, action 6%
+  Utility                      n= 152  spell 61%, monster 14%, metaMagic 6%, radiance 3%, coldDamagePassive 3%
+  Buff                         n= 107  spell 46%, metaMagic 20%, radiance 4%, coldDamagePassive 4%, control 3%
+  Control                      n=  73  spell 61%, control 17%, radiance 9%, metaMagic 2%, coldDamagePassive 2%
+  Summon                       n=  62  spell 67%, radiance 25%, coldDamagePassive 3%, control 1%, utility 1%
+  Debuff                       n=  46  spell 80%, control 6%, radiance 6%, monster 2%, weaponAction 2%
+  Healing                      n=  26  spell 50%, monster 26%, heal 7%, actionPassive 3%, metaMagic 3%
+
+== Action_ icons: UseCosts -> hotbar background
+  Action                       n= 234  radiance 29%, control 17%, monster 13%, metaMagic 9%, action 8%
+  Bonus                        n=  64  radiance 18%, metaMagic 17%, control 14%, monster 10%, weaponAction 10%
+  Other                        n=   7  control 42%, metaMagic 28%, utility 14%, monster 14%
+  Reaction                     n=   3  metaMagic 66%, control 33%
+
+== Action_ icons: VerbalIntent -> hotbar background
+  Damage                       n= 140  radiance 25%, control 23%, weaponAction 11%, action 10%, metaMagic 8%
+  Utility                      n=  58  monster 37%, metaMagic 17%, radiance 10%, coldDamagePassive 10%, action 6%
+  Buff                         n=  57  metaMagic 38%, radiance 8%, coldDamagePassive 8%, control 7%, fireDamagePassive 7%
+  Control                      n=  28  control 46%, radiance 25%, metaMagic 7%, coldDamagePassive 7%, fireDamage 3%
+  Summon                       n=  20  radiance 80%, coldDamagePassive 10%, control 5%, utility 5%
+  Healing                      n=  13  monster 53%, heal 15%, actionPassive 7%, metaMagic 7%, action 7%
+  Debuff                       n=   9  control 33%, radiance 33%, monster 11%, weaponAction 11%, coldDamagePassive 11%
+
+== Action_ icons: glyph hue -> hotbar background
+  orange                       n= 214  radiance 50%, metaMagic 14%, buff 8%, fireDamagePassive 7%, action 4%
+  red                          n= 133  control 45%, weaponAction 18%, action 14%, fireDamage 9%, metaMagic 9%
+  blue                         n=  97  monster 47%, utility 27%, metaMagic 19%, weaponAction 2%, utilityPassive 1%
+  cyan                         n=  30  coldDamagePassive 56%, monster 26%, heal 10%, utility 6%
+  achromatic                   n=  30  action 73%, bonusAction 23%, control 3%
+  green                        n=  21  radiance 42%, monster 33%, metaMagic 19%, nonElementalResistancePassive 4%
+  magenta                      n=  13  control 100%
+  gold                         n=  11  buffPassive 45%, actionPassive 27%, radiance 27%
+  violet                       n=   4  utility 100%
+
+== Spell_ icons: UseCosts -> hotbar background
+  Action                       n= 324  spell 100%
+  Bonus                        n=  41  spell 100%
+
+bg margin (2nd best - best) quantiles: [0.1 0.8 1.9]

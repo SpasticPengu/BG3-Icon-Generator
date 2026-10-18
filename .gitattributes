@@ -1,0 +1,4 @@
+# launchers: cmd needs CRLF (goto labels), sh needs LF
+*.bat text eol=crlf
+*.sh text eol=lf
+*.command text eol=lf

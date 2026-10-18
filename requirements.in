@@ -1,0 +1,8 @@
+# The editor's libraries (D47 / D48). The launchers install exactly requirements.lock into .runtime/env at each start.
+# Pinned to the minor versions the checks run on (the anaconda env); refresh with:
+#   uv pip compile requirements.in --universal --generate-hashes --python-version 3.12 --exclude-newer 2026-10-01 -o requirements.lock
+# The model (diffusers, CUDA torch) is a separate, optional download (8.2), never in here.
+numpy>=2.4,<2.5
+scipy>=1.17,<1.18
+pillow>=12.2,<13
+scikit-image>=0.26,<0.27          # first run only: the parts panel's thinning (iconkit/parts.py)

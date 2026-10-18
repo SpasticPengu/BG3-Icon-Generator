@@ -1,0 +1,91 @@
+# 5.2 first LoRA (D39): FLUX.2 klein base 4B, spells only (iconkit.trainset build outputs/trainset_spells Spell), 512 px,
+# fp8 base + fp8 text encoder, text embeddings cached (encoder unloaded while training), checkpoint + samples every 250
+# steps (5.3 scores every checkpoint). Run: tools/ai-toolkit/venv/Scripts/python.exe train/run_aitk.py train/klein4b_spells.yaml
+job: extension
+config:
+  name: klein4b_spells_v1
+  process:
+    - type: diffusion_trainer
+      training_folder: "{ROOT}/outputs/lora"
+      device: cuda
+      trigger_word: null
+      performance_log_every: 50
+      network:
+        type: lora
+        linear: 32
+        linear_alpha: 32
+      save:
+        dtype: bf16
+        save_every: 250
+        max_step_saves_to_keep: 12
+        save_format: diffusers
+        push_to_hub: false
+      datasets:
+        # one entry per repeat folder: D27 + D33 weights as repeats (trainset.R = 6)
+        - &ds
+          folder_path: "{ROOT}/outputs/trainset_spells/r1"
+          caption_ext: txt
+          caption_dropout_rate: 0.05
+          cache_latents_to_disk: true
+          resolution: [512]
+          num_repeats: 1
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_spells/r2"
+          num_repeats: 2
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_spells/r3"
+          num_repeats: 3
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_spells/r4"
+          num_repeats: 4
+        - <<: *ds
+          folder_path: "{ROOT}/outputs/trainset_spells/r6"
+          num_repeats: 6
+      train:
+        batch_size: 1
+        steps: 2000
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: flowmatch
+        timestep_type: weighted
+        optimizer: adamw8bit
+        optimizer_params:
+          weight_decay: 0.0001
+        lr: 0.0001
+        cache_text_embeddings: true
+        unload_text_encoder: false
+        dtype: bf16
+        loss_type: mse
+      model:
+        arch: flux2_klein_4b
+        name_or_path: "{ROOT}/models/FLUX.2-klein-base-4B"
+        quantize: true
+        qtype: qfloat8
+        quantize_te: true
+        qtype_te: qfloat8
+        low_vram: true
+        model_kwargs:
+          match_target_res: false
+      sample:
+        sampler: flowmatch
+        sample_every: 250
+        width: 512
+        height: 512
+        guidance_scale: 4
+        sample_steps: 25
+        seed: 42
+        walk_seed: false
+        samples:
+          # hold-out captions (data/holdout.txt)
+          - prompt: "bg3 spell icon, healing, a round-bottomed flask with two curling handles at its neck, symmetric."
+          - prompt: "bg3 spell icon, damage, cold damage, a large spiky snowflake with dashed streaks flying from the left."
+          - prompt: "bg3 spell icon, debuff, a cross with flared arms struck through by a long diagonal slash."
+          # objects no motif names (5.3 unseen-objects test)
+          - prompt: "bg3 spell icon, utility, an old lantern with a flame inside, upright, symmetric."
+          - prompt: "bg3 spell icon, damage, fire damage, a cauldron with flames rising from it, symmetric."
+          - prompt: "bg3 spell icon, control, a clock face with its hands spinning, cracks across it."
+meta:
+  name: klein4b_spells_v1
+  version: "1.0"
