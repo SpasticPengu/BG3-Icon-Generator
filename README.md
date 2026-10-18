@@ -89,6 +89,12 @@ data needs an unpacked copy of the game and the pipeline in `iconkit/`. `impleme
 was measured and why it works the way it does, and `research/` holds the scripts behind those numbers. A `v<version>`
 tag builds and publishes a release (`.github/workflows/release.yml`); the icon data is a separate `data-v<N>` release.
 
+## Licence
+
+The app's code is under the [GNU GPL v3](LICENSE): you can use it, change it and share it, and if you share a
+changed version, it has to stay GPL with its source available. The licence covers the code only, not the game's art
+(see below).
+
 ## Credits
 
 Unofficial fan tool, not made or endorsed by Larian Studios or Wizards of the Coast. Baldur's Gate 3 art belongs to

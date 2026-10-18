@@ -3,6 +3,11 @@
 BG3 Icon Generator is an unofficial, free fan tool for making Baldur's Gate 3 mods. It is not made, approved or
 endorsed by Larian Studios or Wizards of the Coast. It is free and will never be sold or put behind a paywall.
 
+## The code
+
+The app's own code is licensed under the GNU General Public License v3.0 (`LICENSE`). That licence covers the code
+only: it does not cover the Baldur's Gate 3 art below or the Dungeons & Dragons material, which belong to their owners.
+
 ## Baldur's Gate 3 art
 
 The game's icons, textures and backgrounds, the icon data the app downloads on its first start, and the review images in

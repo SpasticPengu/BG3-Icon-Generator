@@ -1854,6 +1854,9 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: README rewritten for modders (user: friendly, screenshots, no AI-sounding wording) with four images in
+  docs/images (editor with a demo icon built from library parts, custom gradient, icon / tooltip / hotbar strip,
+  export); research/probes/readme_shots.mjs recaptures them (headless Edge, DevTools protocol). Pushed as 0dbda5e.
 - 2026-10-19: repository set up (user): README.md (features, install, exports in a mod, developers, credits),
   description + 6 topics, wiki / projects off, delete branch on merge, Dependabot alerts + security fixes, private
   vulnerability reporting; pushed as cfcdbcf (with the update-check guard). No licence yet (user's call).
