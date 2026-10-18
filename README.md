@@ -87,7 +87,8 @@ screenshot.
 Plain Python (numpy, scipy, Pillow) serving a browser editor in `app/` (ES modules, no build step). Rebuilding the game
 data needs an unpacked copy of the game and the pipeline in `iconkit/`. `implementation-plan.md` explains how each part
 was measured and why it works the way it does, and `research/` holds the scripts behind those numbers. A `v<version>`
-tag builds and publishes a release (`.github/workflows/release.yml`); the icon data is a separate `data-v<N>` release.
+tag builds and publishes a release (`.github/workflows/release.yml`). The icon data lives on the separate `data` branch,
+one tag per version (`data-v<N>`); clone with `--single-branch` to skip it.
 
 ## Licence
 

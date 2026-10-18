@@ -5,13 +5,13 @@
 > launcher is built (8.1, 2026-10-19)**: `Start.bat` / `start.sh` / `Start.command` set up `.runtime/` and restart after an
 > in-app update; tested here from nothing and through a restart. **Releases go on GitHub**:
 > **Published 2026-10-19 (user):** `main` on `SpasticPengu/BG3-Icon-Generator` is one fresh commit (088cfab, the
-> `phase-7-editor` tree, as SpasticPengu with the noreply email in UTC); local branch `public` tracks it. The `data-v1`
-> release holds the icons download (102 MB, checked live: the app downloads and verifies it). The older branches keep
+> `phase-7-editor` tree, as SpasticPengu with the noreply email in UTC); local branch `public` tracks it. The icons
+> download lives on the orphan branch `data`, tag `data-v1` (no release; the code ships every file's SHA-256). The older branches keep
 > the user's name and +11:00 dates: never push them. From now on commits here are SpasticPengu in UTC (repo config +
 > `TZ=UTC`). Publishing later work: snapshot the work branch's tree onto `public` (CLAUDE.md), push only when asked.
 > Repository set up (user, 2026-10-19): README, description, topics, wiki / projects off, branches deleted on merge,
 > Dependabot alerts + security fixes, private vulnerability reporting (secret scanning was on). `main` = cfcdbcf.
-> Open for the user: **a licence** (none yet: the code is all rights reserved until one is added; 8.4), an optional
+> Licence: GNU GPL v3 (user, 2026-10-19). Open for the user: whether the icon data moves off Releases, an optional
 > social preview image (Settings, web only), and the first app release (`v0.7.0` tag, workflow 8.1b) when asked. Still before a public release: 8.3 (extract from the user's own
 > BG3 install; the editor's first run needs `data/` from the Multitool unpack today), 8.4 (README, licences). **Later, user 2026-10-19 ("we'll come back to this"):
 > vector conversion edge cases**: a crescent outline whose tip test misses (1 of 4 synthetic crescents still traces as
@@ -1854,6 +1854,12 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: icon data moved off Releases (user): orphan branch `data` (no parents, SpasticPengu / UTC, 3,524 files +
+  README) tagged `data-v1`; the code ships `iconkit/data_manifest.json` (SHA-256 per file) and downloads GitHub's zip of
+  the tag, checking every file and writing only the manifest's (`update.build_data` / `commit_data` / `fetch_data`);
+  the data-v1 release and its old tag deleted. Update test passes; live download checked.
+- 2026-10-19: licence GNU GPL v3 for the code (user): LICENSE (GitHub's canonical text), README + NOTICE say it covers
+  the code, not the game's art; GitHub detects it. Pushed as 24692f9.
 - 2026-10-19: README rewritten for modders (user: friendly, screenshots, no AI-sounding wording) with four images in
   docs/images (editor with a demo icon built from library parts, custom gradient, icon / tooltip / hotbar strip,
   export); research/probes/readme_shots.mjs recaptures them (headless Edge, DevTools protocol). Pushed as 0dbda5e.

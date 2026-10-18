@@ -14,9 +14,12 @@ GitHub release asset of REPO (its SHA-256: the asset's digest, else a <zip>.sha2
   rollback  put the last backup back
   build     a release: manifest.json + the zip + its .sha256 (the release script runs it)
   data      the game data an installed copy downloads once (D10 amended 2026-10-19: the user ships the icons): the
-            editor's cut icons, thumbnails, shape cards, fitted colours / recipes and the hotbar backgrounds, a zip +
-            .sha256 for a GitHub release tagged data-v<DATA_VERSION>; `fetch_data` downloads, checks and unpacks it into
-            data/ at the first start (or when DATA_VERSION changes). Built here (it needs the game unpack), uploaded by hand
+            editor's cut icons, thumbnails, shape cards, fitted colours / recipes and the hotbar backgrounds. They live on
+            the orphan branch `data` of REPO (no shared history with the code), each version tagged data-v<DATA_VERSION>;
+            the code ships iconkit/data_manifest.json, the SHA-256 of every data file, and `fetch_data` downloads GitHub's
+            zip of the tag at the first start (or when DATA_VERSION changes), checks every file and puts it in data/.
+            `data` builds the tree, the manifest, the commit, the branch and the tag here (it needs the game unpack); push
+            the branch and the tag, then the code
   test      self-check on throwaway folders (stage from a local feed, apply, edits kept, a failed apply undone, rollback)
 A git checkout (the developer's) never applies updates: it updates with git.
 python -m iconkit.update check | apply | rollback | build OUT_DIR | data OUT_DIR | test"""
@@ -243,14 +246,19 @@ def build(out, root=ROOT):
 
 DATA_FILES = ["data/glyph.json", "data/grammar.json", "data/hotbar.json", "data/links.json", "data/editor/index.json",
               "data/editor/parts.json", "data/editor/icons", "data/editor/thumbs", "data/editor/parts"]
-data_name = lambda v: f"bg3-icon-generator-data-v{v}.zip"
+DATA_MANIFEST = Path(__file__).with_name("data_manifest.json")      # shipped with the code: every data file's SHA-256
+data_tag = lambda v: f"data-v{v}"
+DATA_README = """# Game data for BG3 Icon Generator
+
+This branch holds the editor's game data: Baldur's Gate 3 icons cut into strokes, thumbnails, shape cards, the fitted
+colours and recipes, and the hotbar backgrounds. The app downloads it on its first start and checks every file; there's
+nothing to do here by hand. The art belongs to Larian Studios: see NOTICE.md on the main branch.
+"""
 
 
-def build_data(out, root=ROOT, extra=None):
-    """the game data zip + .sha256 into out -> the zip. extra: {path in the zip: file} (default: the 28 hotbar backgrounds
-    from the game unpack, as data/backgrounds/)"""
-    out = Path(out)
-    out.mkdir(parents=True, exist_ok=True)
+def data_files(root=ROOT, extra=None):
+    """{path under the app folder: source file}. extra: more files (default: the 28 hotbar backgrounds from the game
+    unpack, as data/backgrounds/)"""
     files = {}
     for name in DATA_FILES:
         p = root / name
@@ -265,63 +273,89 @@ def build_data(out, root=ROOT, extra=None):
         extra = {f"data/backgrounds/{f.name}": f for f in sorted(paths.BACKGROUNDS.glob("*.DDS"))}
         if len(extra) != 28:
             raise FileNotFoundError(f"{len(extra)} hotbar backgrounds in {paths.BACKGROUNDS}, not 28")
-    files.update(extra)
-    m = {"data": DATA_VERSION, "files": {k: sha(v) for k, v in files.items()}}
-    zp = out / data_name(DATA_VERSION)
-    with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
-        for k, v in files.items():
-            z.write(v, k)
-        z.writestr("data_manifest.json", json.dumps(m))
-    (out / (zp.name + ".sha256")).write_text(f"{sha(zp)}  {zp.name}\n", encoding="utf-8")
-    log(f"[update] built {zp} ({len(files)} files, {zp.stat().st_size / 1e6:.0f} MB): upload it and its .sha256 to a GitHub "
-        f"release tagged data-v{DATA_VERSION}")
-    return zp
+    return {**files, **extra}
+
+
+def build_data(out, root=ROOT, extra=None, manifest=DATA_MANIFEST):
+    """the data branch's tree in out/ (data/... + README.md) and the manifest the code ships -> out"""
+    out = Path(out)
+    shutil.rmtree(out, ignore_errors=True)
+    files = data_files(root, extra)
+    for k, v in files.items():
+        (out / k).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(v, out / k)
+    (out / "README.md").write_text(DATA_README, encoding="utf-8")
+    m = {"data": DATA_VERSION, "files": {k: sha(out / k) for k in sorted(files)}}
+    Path(manifest).write_text(json.dumps(m, indent=0), encoding="utf-8")
+    log(f"[update] data v{DATA_VERSION}: {len(files)} files in {out}, manifest {manifest}")
+    return out
+
+
+def commit_data(tree, root=ROOT):
+    """tree as an orphan commit (as this repository's git identity, in UTC), branch `data` and tag data-v<N> -> its sha"""
+    import subprocess
+    tag = data_tag(DATA_VERSION)
+    with tempfile.TemporaryDirectory() as t:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(t) / "index"), "TZ": "UTC"}
+        git = lambda *a: subprocess.run(["git", *a], cwd=root, env=env, capture_output=True, text=True, check=True).stdout.strip()
+        git(f"--work-tree={tree}", "add", "-A", "-f", ".")
+        c = git("commit-tree", git("write-tree"), "-m", f"Game data v{DATA_VERSION} for the editor (see README.md)")
+    old = subprocess.run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], cwd=root, capture_output=True, text=True).stdout.strip()
+    if old and subprocess.run(["git", "rev-parse", f"{old}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip() != \
+            subprocess.run(["git", "rev-parse", f"{c}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip():
+        raise RuntimeError(f"tag {tag} already holds different data: bump DATA_VERSION (iconkit/__init__.py) for new data")
+    if not old:
+        subprocess.run(["git", "tag", tag, c], cwd=root, check=True)
+        subprocess.run(["git", "branch", "-f", "data", c], cwd=root, check=True)
+    log(f"[update] {tag} = {old or c}: push with `git push origin data {tag}`, then the code (with iconkit/data_manifest.json)")
+    return old or c
 
 
 def download(url, dest, what):
-    """stream url to dest, saying how far it got every 10%"""
+    """stream url to dest, saying how far it got (every 10%, or every 20 MB when the size isn't known)"""
     req = urllib.request.Request(url, headers={"User-Agent": f"bg3-icon-generator/{__version__}"})
     with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
         size, got, said = int(r.headers.get("Content-Length") or 0), 0, -1
         for b in iter(lambda: r.read(1 << 20), b""):
             f.write(b)
             got += len(b)
-            if size and got * 10 // size > said:
-                said = got * 10 // size
-                log(f"[update] {what}: {got / 1e6:.0f} of {size / 1e6:.0f} MB")
+            step = got * 10 // size if size else got // 20_000_000
+            if step > said:
+                said = step
+                log(f"[update] {what}: {got / 1e6:.0f}" + (f" of {size / 1e6:.0f} MB" if size else " MB"))
 
 
-def fetch_data(root=ROOT, url=None):
-    """download the game data for this DATA_VERSION, check it, unpack it into data/ -> the number of files"""
-    url = url or os.environ.get("ICONGEN_DATA_URL") or f"https://github.com/{REPO}/releases/download/data-v{DATA_VERSION}/{data_name(DATA_VERSION)}"
+def fetch_data(root=ROOT, url=None, manifest=DATA_MANIFEST):
+    """download the game data for this DATA_VERSION (GitHub's zip of its tag), check every file against the manifest
+    shipped with the code, put them in data/ -> the number of files"""
+    m = json.loads(Path(manifest).read_text(encoding="utf-8"))
+    if m["data"] != DATA_VERSION:
+        raise ValueError(f"the shipped data manifest is for version {m['data']}, this app needs {DATA_VERSION}")
+    url = url or os.environ.get("ICONGEN_DATA_URL") or f"https://github.com/{REPO}/archive/refs/tags/{data_tag(DATA_VERSION)}.zip"
     u = upd(root)
     u.mkdir(parents=True, exist_ok=True)
-    zp = u / "data.zip"
+    zp, tmp = u / "data.zip", u / "data-staging"
     log(f"[update] downloading the game's icons (about 110 MB, once) from {url}")
     download(url, zp, "the game's icons")
-    want = fetch(url + ".sha256").decode().split()[0]
-    if sha(zp) != want.lower():
-        zp.unlink()
-        raise ValueError("the downloaded icons don't match their SHA-256: not used (start again to retry)")
-    tmp = u / "data-staging"
     shutil.rmtree(tmp, ignore_errors=True)
     with zipfile.ZipFile(zp) as z:
-        for n in z.namelist():
-            if Path(n).is_absolute() or ".." in Path(n).parts or not (n.startswith("data/") or n == "data_manifest.json"):
-                raise ValueError(f"unexpected path in the icons download: {n}")
-        z.extractall(tmp)
-    m = json.loads((tmp / "data_manifest.json").read_text(encoding="utf-8"))
-    if m["data"] != DATA_VERSION:
-        raise ValueError(f"the download holds data version {m['data']}, this app needs {DATA_VERSION}")
-    for p, h in m["files"].items():
-        if sha(tmp / p) != h:
-            raise ValueError(f"{p} in the icons download doesn't match its manifest")
+        names = set(z.namelist())
+        tops = {n.split("/", 1)[0] for n in names}
+        top = tops.pop() + "/" if len(tops) == 1 and not any(n.startswith("data/") for n in names) else ""   # GitHub's archives wrap one folder
+        for p, h in m["files"].items():                 # only the manifest's files are read and written
+            if top + p not in names:
+                raise ValueError(f"{p} is missing from the icons download")
+            b = z.read(top + p)
+            if hashlib.sha256(b).hexdigest() != h:
+                raise ValueError(f"{p} in the icons download doesn't match its SHA-256: not used (start again to retry)")
+            (tmp / p).parent.mkdir(parents=True, exist_ok=True)
+            (tmp / p).write_bytes(b)
     for p in m["files"]:
         (root / p).parent.mkdir(parents=True, exist_ok=True)
         os.replace(tmp / p, root / p)
     shutil.rmtree(tmp, ignore_errors=True)
     zp.unlink()
-    log(f"[update] the game's icons are in place ({len(m['files'])} files)")
+    log(f"[update] the game's icons are in place ({len(m['files'])} files, each checked)")
     return len(m["files"])
 
 
@@ -406,25 +440,32 @@ def test():
                 (dev / n).mkdir(exist_ok=True)
                 (dev / n / "a.png").write_bytes(n.encode())
         (t / "bg.DDS").write_bytes(b"bg")
-        dz = build_data(t / "dout", dev, extra={"data/backgrounds/bg.DDS": t / "bg.DDS"})
+        man = t / "data_manifest.json"
+        tree_ = build_data(t / "dtree", dev, extra={"data/backgrounds/bg.DDS": t / "bg.DDS"}, manifest=man)
+        arch = t / "data-v1.zip"                       # the shape of GitHub's zip of a tag: one folder around the tree
+
+        def archive(change=None):
+            with zipfile.ZipFile(arch, "w") as z:
+                for f in sorted(tree_.rglob("*")):
+                    if f.is_file():
+                        rel = f.relative_to(tree_).as_posix()
+                        z.writestr(f"BG3-Icon-Generator-data-v1/{rel}", b"tampered" if rel == change else f.read_bytes())
+        archive()
         (user / "data" / "editor").mkdir(parents=True)
         (user / "outputs" / "editor").mkdir(parents=True)
         (user / "outputs" / "editor" / "draft.json").write_text("mine", encoding="utf-8")
-        assert fetch_data(user, dz.as_uri()) == len(DATA_FILES) + 1
+        assert fetch_data(user, arch.as_uri(), man) == len(DATA_FILES) + 1
         assert (user / "data/editor/icons/a.png").read_bytes() == b"data/editor/icons" and (user / "data/backgrounds/bg.DDS").exists()
-        assert (user / "outputs/editor/draft.json").read_text() == "mine"
-        sidecar = Path(str(dz) + ".sha256")
-        good = sidecar.read_text()
-        sidecar.write_text("0" * 64)
+        assert (user / "outputs/editor/draft.json").read_text() == "mine" and not (user / "README.md").exists()
+        archive(change="data/editor/thumbs/a.png")
         try:
-            fetch_data(user, dz.as_uri())
-            raise AssertionError("tampered icons were used")
+            fetch_data(user, arch.as_uri(), man)
+            raise AssertionError("a tampered icon file was used")
         except ValueError as e:
             assert "SHA-256" in str(e), e
-        sidecar.write_text(good)
     log("[update] test passed: check, stage (tampered download refused), apply (code replaced, file removed and added, "
         "your edited list kept + .new, user folders untouched), failed apply undone, rollback, git checkout refused, build (launchers "
-        "executable, line endings, lock covers requirements.in), game data (build, download, check, unpack; a tampered one refused)")
+        "executable, line endings, lock covers requirements.in), game data (tree + manifest, tag archive downloaded, every file checked; a tampered file refused)")
 
 
 if __name__ == "__main__":
@@ -439,7 +480,7 @@ if __name__ == "__main__":
     elif cmd == "build":
         build(a[1] if len(a) > 1 else ROOT / "outputs" / "release")
     elif cmd == "data":
-        build_data(a[1] if len(a) > 1 else ROOT / "outputs" / "release")
+        commit_data(build_data(a[1] if len(a) > 1 else ROOT / "outputs" / "data-tree"))
     elif cmd == "test":
         test()
     else:

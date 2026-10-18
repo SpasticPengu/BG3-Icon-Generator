@@ -165,9 +165,11 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   personal-strings check from memory `public-repo-identity` (its terms stay out of the repo) and find nothing, then
   `TZ=UTC git commit-tree <work-branch>^{tree} -p public -m "..."`, `git branch -f public <sha>`, and push with
   `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin public:main`.
-  Game data release: `python -m iconkit.update data OUT` (needs the game unpack) → upload the zip + .sha256 to a GitHub
-  release tagged `data-v<DATA_VERSION>`; bump `iconkit.DATA_VERSION` when installed copies must download it again.
-  Test an install: unzip the code release into an empty folder, `ICONGEN_DATA_URL=<file URL of the data zip>`, Start.bat.
+  Game data (no release): orphan branch `data`, one tag per version `data-v<DATA_VERSION>`; the code ships
+  `iconkit/data_manifest.json` (every file's SHA-256) and installed copies download GitHub's zip of the tag. New data:
+  bump `iconkit.DATA_VERSION`, `python -m iconkit.update data` (needs the game unpack: tree in `outputs/data-tree`, the
+  manifest, orphan commit, branch, tag), push `git push origin data data-v<N>` BEFORE the code that needs it. Test an
+  install: `git archive --format=zip --prefix=x/ data-v1 > d.zip`, `ICONGEN_DATA_URL=<file URL of d.zip>`, Start.bat.
   Releases (D48, GitHub): bump `iconkit/__init__.py` `__version__`, commit, tag `v<version>`, push the tag (only when
   the user asks): `.github/workflows/release.yml` tests, builds and publishes. `update.REPO` = the GitHub repository.
   Updates (D48): `iconkit/update.py` (`python -m iconkit.update test | build OUT | check | apply | rollback`), version in
