@@ -285,28 +285,34 @@ def build_data(out, root=ROOT, extra=None, manifest=DATA_MANIFEST):
         (out / k).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(v, out / k)
     (out / "README.md").write_text(DATA_README, encoding="utf-8")
+    (out / ".gitattributes").write_text("* -text\n", encoding="utf-8")   # byte for byte: git must never touch line endings
     m = {"data": DATA_VERSION, "files": {k: sha(out / k) for k in sorted(files)}}
     Path(manifest).write_text(json.dumps(m, indent=0), encoding="utf-8")
     log(f"[update] data v{DATA_VERSION}: {len(files)} files in {out}, manifest {manifest}")
     return out
 
 
-def commit_data(tree, root=ROOT):
-    """tree as an orphan commit (as this repository's git identity, in UTC), branch `data` and tag data-v<N> -> its sha"""
+def commit_data(tree, root=ROOT, replace=False):
+    """tree as an orphan commit (as this repository's git identity, in UTC), branch `data` and tag data-v<N> -> its sha.
+    The files go in byte for byte (no line-ending conversion: core.autocrlf on Windows turned the JSON's CRLF into LF and
+    every hash missed). replace: move an existing tag (only for a version no released app uses yet)"""
     import subprocess
     tag = data_tag(DATA_VERSION)
     with tempfile.TemporaryDirectory() as t:
         env = {**os.environ, "GIT_INDEX_FILE": str(Path(t) / "index"), "TZ": "UTC"}
-        git = lambda *a: subprocess.run(["git", *a], cwd=root, env=env, capture_output=True, text=True, check=True).stdout.strip()
+        git = lambda *a: subprocess.run(["git", "-c", "core.autocrlf=false", "-c", "core.safecrlf=false", *a], cwd=root, env=env,
+                                        capture_output=True, text=True, check=True).stdout.strip()
         git(f"--work-tree={tree}", "add", "-A", "-f", ".")
         c = git("commit-tree", git("write-tree"), "-m", f"Game data v{DATA_VERSION} for the editor (see README.md)")
     old = subprocess.run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], cwd=root, capture_output=True, text=True).stdout.strip()
-    if old and subprocess.run(["git", "rev-parse", f"{old}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip() != \
-            subprocess.run(["git", "rev-parse", f"{c}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip():
+    same = old and subprocess.run(["git", "rev-parse", f"{old}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip() == \
+        subprocess.run(["git", "rev-parse", f"{c}^{{tree}}"], cwd=root, capture_output=True, text=True).stdout.strip()
+    if old and not same and not replace:
         raise RuntimeError(f"tag {tag} already holds different data: bump DATA_VERSION (iconkit/__init__.py) for new data")
-    if not old:
-        subprocess.run(["git", "tag", tag, c], cwd=root, check=True)
+    if not same:
+        subprocess.run(["git", "tag", "-f", tag, c], cwd=root, check=True, capture_output=True)
         subprocess.run(["git", "branch", "-f", "data", c], cwd=root, check=True)
+        old = None
     log(f"[update] {tag} = {old or c}: push with `git push origin data {tag}`, then the code (with iconkit/data_manifest.json)")
     return old or c
 
@@ -440,8 +446,18 @@ def test():
                 (dev / n).mkdir(exist_ok=True)
                 (dev / n / "a.png").write_bytes(n.encode())
         (t / "bg.DDS").write_bytes(b"bg")
+        (dev / "data/glyph.json").write_bytes(b'{\r\n"crlf": 1\r\n}\r\n')   # Windows line endings must survive git
         man = t / "data_manifest.json"
         tree_ = build_data(t / "dtree", dev, extra={"data/backgrounds/bg.DDS": t / "bg.DDS"}, manifest=man)
+        import subprocess                              # through real git, as commit_data does it: bytes unchanged
+        g = t / "g"
+        subprocess.run(["git", "init", "-q", str(g)], check=True)
+        subprocess.run(["git", "-C", str(g), "config", "core.autocrlf", "true"], check=True)
+        subprocess.run(["git", "-C", str(g), "config", "user.name", "test"], check=True)
+        subprocess.run(["git", "-C", str(g), "config", "user.email", "test@example.invalid"], check=True)
+        dc = commit_data(tree_, g)
+        blob = subprocess.run(["git", "-C", str(g), "show", f"{dc}:data/glyph.json"], capture_output=True, check=True).stdout
+        assert blob == (dev / "data/glyph.json").read_bytes(), f"git changed the data's bytes: {blob!r}"
         arch = t / "data-v1.zip"                       # the shape of GitHub's zip of a tag: one folder around the tree
 
         def archive(change=None):
