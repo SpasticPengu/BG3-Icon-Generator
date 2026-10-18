@@ -1854,6 +1854,15 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: first-start console text (user: too informal and confusing): a "first-time setup" header and numbered
+  steps ([1/3] setup tool, [2/3] Python 3.12 + packages, [3/3] game icons, "of about 100 MB" progress; real archive 102
+  MB), "Setup complete: 3,524 files downloaded and verified.", then "BG3 Icon Generator X is running at URL" + how to
+  stop. Update install / failure lines rewritten the same way. A failed icon download prints a reason, not a traceback,
+  and `launch.py` keeps the window open on any error (not after Ctrl+C). Tested: fresh unzip of the built zip, real uv /
+  Python / packages, local data archive (35 s); a refused download. Not released yet.
+- 2026-10-19: **v0.7.3 published** (user): `main` = 781599f, tag v0.7.3, asset `BG3-Icon-Generator.zip` (+ .sha256);
+  README links the permanent download `releases/latest/download/BG3-Icon-Generator.zip` (checked: 200). Notes in the
+  new sections. v0.7.2's asset keeps its old name on purpose (published assets stay as published; user agreed).
 - 2026-10-19: release notes (user: more formal, sections): v0.7.2 and v0.7.1 rewritten on GitHub as Bug Fixes /
   Features (+ Installation; empty sections left out); the Update dialog renders them (`notesInto`, elements built from
   text, never innerHTML). Zip renamed `BG3-Icon-Generator.zip` (user: the unzipped folder kept the old version after an

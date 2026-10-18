@@ -1321,7 +1321,11 @@ def serve(args):
         # an installed copy: the game's icons are a download (D10 amended 2026-10-19), not cut here (that needs the game
         # unpack; 8.3 may read the user's install instead)
         from . import update
-        update.fetch_data()
+        try:
+            update.fetch_data()
+        except Exception as ex:                # a readable reason, not a traceback (launch.py keeps the window open)
+            log(f"\nDownloading the game icons failed: {ex}\nCheck your internet connection and start the editor again.")
+            sys.exit(1)
         old = DATA_V
     if not (E / "index.json").exists() or old != DATA_V:
         log("[editor] first run: cutting the game's icons into strokes (~3 min)" if old is None else
@@ -1342,7 +1346,9 @@ def serve(args):
             continue
     url = f"http://127.0.0.1:{srv.server_port}/"
     threading.Thread(target=state, daemon=True).start()               # warm up (backgrounds) while the page loads
-    log(f"[editor] open {url}  (Ctrl+C stops)")
+    from . import __version__
+    log(f"\nBG3 Icon Generator {__version__} is running at {url}\n"
+        "Keep this window open while you use the editor. To stop it, press Ctrl+C or close this window.")
     reopened = RESTARTING.exists() and time.time() - RESTARTING.stat().st_mtime < 300   # after an update the open page
     RESTARTING.unlink(missing_ok=True)                 # reloads itself (a new window each update, user 2026-10-19)
     if "--no-browser" not in args and not reopened:

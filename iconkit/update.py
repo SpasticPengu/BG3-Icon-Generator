@@ -132,7 +132,7 @@ def stage(info, root=ROOT):
     shutil.rmtree(final, ignore_errors=True)
     base.rename(final)
     shutil.rmtree(tmp, ignore_errors=True)
-    log(f"[update] {m['version']} downloaded and checked: installs at the next start")
+    log(f"Version {m['version']} has been downloaded and verified. It will be installed when the editor restarts.")
     return m["version"]
 
 
@@ -188,12 +188,12 @@ def apply(root=ROOT, force=False, _fail_after=None):
     except Exception:
         (bak / "record.json").write_text(json.dumps(record), encoding="utf-8")
         rollback(root, bak)
-        log(f"[update] installing {new['version']} failed: put {old['version']} back")
+        log(f"Installing version {new['version']} failed; version {old['version']} has been restored.")
         raise
     (bak / "record.json").write_text(json.dumps(record), encoding="utf-8")
     shutil.rmtree(src, ignore_errors=True)
     (u / "applied.json").write_text(json.dumps({**record, "time": time.time()}), encoding="utf-8")
-    log(f"[update] installed {new['version']} (was {old['version']})" + (f"; kept your edited {', '.join(kept)} (the new copies are .new)" if kept else ""))
+    log(f"Installed version {new['version']} (previously {old['version']})." + (f" Your edited {', '.join(kept)} were kept; the new copies are saved as .new files." if kept else ""))
     return record
 
 
@@ -314,7 +314,8 @@ def commit_data(tree, root=ROOT, replace=False):
 
 
 def download(url, dest, what):
-    """stream url to dest, saying how far it got (every 10%, or every 20 MB when the size isn't known)"""
+    """stream url to dest, saying how far it got (every 10%, or every 20 MB of `what`, the expected MB, when the server
+    doesn't send the size: GitHub's tag archives)"""
     req = urllib.request.Request(url, headers={"User-Agent": f"bg3-icon-generator/{__version__}"})
     with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
         size, got, said = int(r.headers.get("Content-Length") or 0), 0, -1
@@ -324,7 +325,7 @@ def download(url, dest, what):
             step = got * 10 // size if size else got // 20_000_000
             if step > said:
                 said = step
-                log(f"[update] {what}: {got / 1e6:.0f}" + (f" of {size / 1e6:.0f} MB" if size else " MB"))
+                log(f"      {got / 1e6:.0f} of {size / 1e6:.0f} MB" if size else f"      {got / 1e6:.0f} of about {what} MB")
 
 
 def fetch_data(root=ROOT, url=None, manifest=DATA_MANIFEST):
@@ -337,8 +338,10 @@ def fetch_data(root=ROOT, url=None, manifest=DATA_MANIFEST):
     u = upd(root)
     u.mkdir(parents=True, exist_ok=True)
     zp, tmp = u / "data.zip", u / "data-staging"
-    log(f"[update] downloading the game's icons (about 110 MB, once) from {url}")
-    download(url, zp, "the game's icons")
+    fresh = not (root / "data/editor/index.json").exists()
+    log(("[3/3] Downloading the game icons, about 100 MB (only once)..." if fresh else
+         "Downloading the updated game icons, about 100 MB...") + (f"\n      from {url}" if url.startswith("file:") else ""))
+    download(url, zp, 100)
     shutil.rmtree(tmp, ignore_errors=True)
     with zipfile.ZipFile(zp) as z:
         names = set(z.namelist())
@@ -357,7 +360,7 @@ def fetch_data(root=ROOT, url=None, manifest=DATA_MANIFEST):
         os.replace(tmp / p, root / p)
     shutil.rmtree(tmp, ignore_errors=True)
     zp.unlink()
-    log(f"[update] the game's icons are in place ({len(m['files'])} files, each checked)")
+    log(("Setup complete" if fresh else "The game icons have been updated") + f": {len(m['files']):,} files downloaded and verified.")
     return len(m["files"])
 
 

@@ -53,7 +53,7 @@ Windows 10 or 11. (macOS and Linux start scripts are included but haven't been t
 
 The first start takes a few minutes and needs the internet once. It sets up its own copy of Python in a `.runtime`
 folder next to the app (nothing is installed anywhere else, no admin rights needed) and downloads the game's icons
-(about 110 MB). After that the editor opens in your browser. Everything together takes about 420 MB.
+(about 100 MB). After that the editor opens in your browser. Everything together takes about 420 MB.
 
 You don't need the game files or any other modding tools. To uninstall, delete the folder.
 

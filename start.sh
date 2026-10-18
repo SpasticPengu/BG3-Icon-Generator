@@ -7,14 +7,14 @@ cd "$(dirname "$0")" || exit 1
 RT="$PWD/.runtime"
 UV="$RT/uv/uv"
 export UV_CACHE_DIR="$RT/cache" UV_PYTHON_INSTALL_DIR="$RT/python"
-fail() { echo; echo "Setting up failed (see above). Check the internet connection and start again; deleting .runtime starts the setup over."; exit 1; }
+fail() { echo; echo "Setup could not be completed; see the messages above. Check your internet connection and run the start script again."; echo "If the problem continues, delete the .runtime folder to start the setup from the beginning."; exit 1; }
 if [ ! -x "$UV" ]; then
-  echo "First start: downloading uv, which sets up the app's own Python..."
+  echo "BG3 Icon Generator: first-time setup"; echo "This takes a few minutes and needs an internet connection. Everything is installed inside this folder."; echo; echo "[1/3] Downloading the setup tool, uv..."
   curl -LsSf https://astral.sh/uv/0.12.18/install.sh | env UV_UNMANAGED_INSTALL="$RT/uv" sh || fail
   [ -x "$UV" ] || fail
 fi
 if [ ! -x "$RT/env/bin/python" ]; then
-  echo "First start: setting up Python and the libraries, about a minute..."
+  echo "[2/3] Installing Python 3.12 and the required packages..."
   "$UV" venv "$RT/env" --managed-python --python 3.12 --quiet || fail
 fi
 while :; do

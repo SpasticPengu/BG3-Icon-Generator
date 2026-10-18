@@ -161,6 +161,9 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   `cmd.exe /c .\Start.bat --no-browser --drafts DIR` (returns at once: the batch hands the console to `iconkit/launch.py`
   with `start /b` so Ctrl+C never asks "Terminate batch job"; that loop restarts after an update); stop its python
   afterwards (port 8765). Ctrl+C harness: send a real CTRL_C_EVENT via AttachConsole to a hidden console.
+  Console text a user sees (setup steps `[1/3]`-`[3/3]` across Start.bat / start.sh / `update.fetch_data`, update
+  install, the "is running at" line, failures) is formal full sentences without `[tag]` prefixes (user 2026-10-19);
+  developer logs keep `[editor]` / `[update]`. On an error `launch.py` keeps the window open (Enter to close).
   Repository: `SpasticPengu/BG3-Icon-Generator` (public). **Commit here as SpasticPengu (repo config) in UTC: `TZ=UTC git
   commit ...`** (overrides the global real-name identity; user 2026-10-19). Branch `public` tracks `origin/main`; every
   older branch has the user's name and +11:00 dates: never push them. Publish (only when the user asks): run the

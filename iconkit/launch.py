@@ -11,6 +11,7 @@ UV = Path(sys.prefix).parent / "uv" / "uv.exe"          # .runtime\env -> .runti
 
 def main(args):
     ctypes.windll.kernel32.SetConsoleCtrlHandler(None, False)   # start /b turns Ctrl+C off; on again (the editor inherits it)
+    stopped = False
     while True:
         p = subprocess.Popen([sys.executable, "-m", "iconkit.editor", *args], cwd=ROOT)
         while True:
@@ -18,11 +19,14 @@ def main(args):
                 code = p.wait()
                 break
             except KeyboardInterrupt:                  # the editor gets the Ctrl+C too and stops by itself
-                pass
+                stopped = True
+        if code not in (0, 75) and not stopped:        # an error: keep the window open so the message can be read
+            input("\nThe editor stopped because of an error; see the messages above. Press Enter to close this window.")
         if code != 75:
             return code
         if subprocess.call([str(UV), "pip", "sync", "requirements.lock", "--python", sys.executable, "--require-hashes", "--quiet"], cwd=ROOT):
-            input("\nUpdating the libraries failed (see above). Press Enter to close, then start again.")
+            input("\nInstalling the packages required by the update failed; see the messages above. Press Enter to close this "
+                  "window, then run Start.bat again.")
             return 1
 
 

@@ -25,14 +25,17 @@ set "UVV=0.12.18"
 set "ARCH=x86_64"
 if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "ARCH=aarch64"
 set "URL=https://github.com/astral-sh/uv/releases/download/%UVV%/uv-%ARCH%-pc-windows-msvc.zip"
-echo First start: downloading uv %UVV%, which sets up the app's own Python...
+echo BG3 Icon Generator: first-time setup
+echo This takes a few minutes and needs an internet connection. Everything is installed inside this folder.
+echo.
+echo [1/3] Downloading the setup tool, uv %UVV%...
 curl.exe -LsSf -o "%RT%\uv.zip" "%URL%" || goto fail
 curl.exe -LsSf -o "%RT%\uv.zip.sha256" "%URL%.sha256" || goto fail
 for /f "usebackq tokens=1" %%h in ("%RT%\uv.zip.sha256") do set "WANT=%%h"
 for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%RT%\uv.zip" SHA256') do if not defined GOT set "GOT=%%h"
 set "GOT=%GOT: =%"
 if /i not "%GOT%"=="%WANT%" (
-  echo The uv download doesn't match its published SHA-256: not used.
+  echo The downloaded setup tool does not match its published checksum and was not used.
   goto fail
 )
 if not exist "%RT%\uv" mkdir "%RT%\uv"
@@ -41,7 +44,7 @@ del "%RT%\uv.zip" "%RT%\uv.zip.sha256"
 if not exist "%UV%" goto fail
 :haveuv
 if exist "%RT%\env\Scripts\python.exe" goto sync
-echo First start: setting up Python and the libraries, about a minute...
+echo [2/3] Installing Python 3.12 and the required packages...
 "%UV%" venv "%RT%\env" --managed-python --python 3.12 --quiet || goto fail
 :sync
 "%UV%" pip sync requirements.lock --python "%RT%\env\Scripts\python.exe" --require-hashes --quiet || goto fail
@@ -50,7 +53,7 @@ start "" /b "%RT%\env\Scripts\python.exe" -m iconkit.launch %ICONGEN_ARGS%
 exit /b
 :fail
 echo.
-echo Setting up failed (see above). Check the internet connection and start again; deleting the .runtime folder starts
-echo the setup over.
+echo Setup could not be completed; see the messages above. Check your internet connection and run Start.bat again.
+echo If the problem continues, delete the .runtime folder to start the setup from the beginning.
 pause
 exit /b 1
