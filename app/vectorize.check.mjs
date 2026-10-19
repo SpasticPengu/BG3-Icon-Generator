@@ -1,6 +1,6 @@
 // node app/vectorize.check.mjs: vectorize() on drawn shapes (no browser needed; the page's "To vector strokes" also
 // checks each result against the bitmap with match()).
-import {vectorize, match, barbDensity, taperCut} from "./vectorize.js";
+import {vectorize, match, barbDensity, taperCut, pieces} from "./vectorize.js";
 
 function draw(w, h, f) { const a = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (f(x, y)) a[y * w + x] = 255; return a; }
 const seg = (x, y, ax, ay, bx, by, r) => { const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
@@ -36,4 +36,7 @@ const wide = (x, y0, y1) => { let c = 0; for (let y = y0; y < y1; y++) if (ta[y 
 const [atCut, mid, far, other] = [wide(91, 0, 33), wide(72, 0, 33), wide(50, 0, 33), Math.min(...[60, 80, 91, 100, 120].map(x => wide(x, 33, 60)))];
 ok(atCut >= 3 && atCut <= 6 && mid > atCut && mid < 13 && far === 13 && other === 13,
    `tapered cut: width 13 bar -> ${atCut} at the cut (~4), ${mid} halfway (~10), ${far} 3 widths away (13); the uncut bar ${other} (13)`);
-console.log("vectorize check passed: line, cross (2 marks), dot (dab), ring (closed), a cut ring (open), crescent (closed, corners at the tips), match tolerance, barb measure, tapered cut");
+// pieces: the tapered cut above leaves 4 (two halves of the cut bar, the whole bar, nothing else); each seed is bright
+const pc = pieces(ta.map((v, i) => Math.round(v * tf[i])), 200, 60).list;
+ok(pc.length === 3 && pc.every(p => p.peak === 255 && p.n > 300), `pieces after a cut: 3 bright pieces, got ${JSON.stringify(pc.map(p => [p.n, p.peak]))}`);
+console.log("vectorize check passed: line, cross (2 marks), dot (dab), ring (closed), a cut ring (open), crescent (closed, corners at the tips), match tolerance, barb measure, tapered cut, pieces");

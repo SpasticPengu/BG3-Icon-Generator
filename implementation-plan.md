@@ -1854,6 +1854,14 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: erasing a stroke into separate pieces now splits it into one layer per piece (user: the tapered cut left
+  both halves in one layer); Pixels and Tapered modes. Each piece = a copy with the same erase list + `keep` (seed at
+  the piece's brightest pixel, local px), applied after the erases in bake and export (`applyErases`), saved in drafts.
+  Names: original, then "Name (2)"... in the same layer position; a selected stroke's pieces stay selected. Node check
+  (`pieces`: 3 bright pieces after the tapered cut). In the page: plain + tapered cuts split (2 -> 4 layers), undo /
+  redo, 2048 export (both halves of both strokes present), reload restores the 4 layers.
+- 2026-10-19: **v0.7.6 published** (user): `main` = 470bb54, tag v0.7.6, workflow passed, notes set (tapered eraser,
+  search clear buttons, centred close buttons); the permanent download link serves it.
 - 2026-10-19: eraser modes (user: simple, stroke, and one that leaves proper tapered ends): Pixels and Whole strokes
   existed; new **Tapered**: the parts a cut leaves narrow to the cut like a brush end (tip .32 of the width over 3
   widths, power .7, the brush's own numbers). `vectorize.taperCut` (geodesic distance from the cut through what is

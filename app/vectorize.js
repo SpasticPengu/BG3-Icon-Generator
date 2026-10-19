@@ -362,4 +362,22 @@ export function taperCut(before, after, w, h, tip = .32, len = 3, pow = .7) {
   }
   return out;
 }
+// the separate pieces of a bitmap (alpha > 0, 8 neighbours): a label per pixel (0 = empty) and per piece its size,
+// peak alpha and the peak's pixel (a stroke's centre: the seed that finds the piece again at any scale)
+export function pieces(alpha, w, h) {
+  const lab = new Int32Array(w * h), q = new Int32Array(w * h), list = [];
+  for (let i = 0; i < w * h; i++) {
+    if (!alpha[i] || lab[i]) continue;
+    const p = {n: 0, peak: 0, at: i}, id = list.push(p);
+    let qh = 0, qt = 0;
+    q[qt++] = i; lab[i] = id;
+    while (qh < qt) {
+      const c = q[qh++], x = c % w, y = (c / w) | 0;
+      p.n++;
+      if (alpha[c] > p.peak) { p.peak = alpha[c]; p.at = c; }
+      for (const [dx, dy] of OFF) { const X = x + dx, Y = y + dy, j = Y * w + X; if (X >= 0 && Y >= 0 && X < w && Y < h && alpha[j] && !lab[j]) { lab[j] = id; q[qt++] = j; } }
+    }
+  }
+  return {lab, list};
+}
 export const _internal = {thin, spare, chamfer, graph, cross};   // for offline tests

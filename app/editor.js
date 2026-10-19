@@ -4,7 +4,7 @@
 // game's single drawing) and repaints it on the GPU (glow.js); the PC hotbar cell and the export go through Python.
 import {Painter} from "./glow.js";
 import * as Brush from "./brush.js";
-import {vectorize, match, barbDensity, barbs, taperCut} from "./vectorize.js";
+import {vectorize, match, barbDensity, barbs, taperCut, pieces} from "./vectorize.js";
 
 const N = 512, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -237,6 +237,37 @@ function applyErase(x, e, k, ox, oy) {
   for (let i = 0; i < w * h; i++) if (f[i] < 1) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * f[i]);
   x.putImageData(img, 0, 0);
 }
+// an item's eraser strokes on x (destination-out set), then, for a stroke split off by the eraser, only its own piece:
+// the one holding it.keep (local px, like the eraser's points; a seed at the piece's centre finds it at any scale)
+function applyErases(x, it, k, ox, oy) {
+  for (const e of it.erase) applyErase(x, e, k, ox, oy);
+  if (!it.keep) return;
+  const {width: w, height: h} = x.canvas, img = x.getImageData(0, 0, w, h), d = img.data, A = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) A[i] = d[i * 4 + 3];
+  const {lab} = pieces(A, w, h), sx = Math.floor(it.keep[0] * k - ox), sy = Math.floor(it.keep[1] * k - oy);
+  let L = 0;
+  for (let r = 0; !L && r <= Math.ceil(2 * k); r++)            // the seed's pixel, else the nearest drawn one
+    for (let dy = -r; dy <= r && !L; dy++) for (let dx = -r; dx <= r && !L; dx++) {
+      const X = sx + dx, Y = sy + dy;
+      if (X >= 0 && Y >= 0 && X < w && Y < h) L = lab[Y * w + X];
+    }
+  for (let i = 0; i < w * h; i++) if (lab[i] !== L) d[i * 4 + 3] = 0;
+  x.putImageData(img, 0, 0);
+}
+// an erase that left a stroke in separate pieces: each piece becomes its own stroke, in the same place in the layers
+// (user 2026-10-19). Pieces too faint to pick (peak alpha <= 60) or under 4 px are crumbs: dropped with the split.
+function splitPieces(it) {
+  const real = pieces(it.alpha, it.w, it.h).list.filter(p => p.peak > 60 && p.n >= 4);
+  if (real.length < 2) return [it];
+  const out = real.map((p, j) => {
+    const c = j ? {...clone(it), id: uid++, name: `${it.name} (${j + 1})`} : it;
+    c.keep = [p.at % it.w + .5 + it.ox, ((p.at / it.w) | 0) + .5 + it.oy];
+    bake(c);
+    return c;
+  });
+  items.splice(items.indexOf(it), 1, ...out);
+  return out;
+}
 function bake(it) {                            // base bitmap (restyled: barbs) minus the eraser strokes -> bmp + alpha (for picking)
   if (it.type === "game") {                     // a game stroke's barbs changed: its bitmap grows by the barbs' reach
     const r = it.barbs != null ? restyled(it) : {canvas: it.base, alpha: it.baseAlpha, pad: 0};
@@ -245,7 +276,7 @@ function bake(it) {                            // base bitmap (restyled: barbs) 
     const c = canvas(it.w, it.h), x = ctx2d(c);
     x.drawImage(r.canvas, 0, 0);
     x.globalCompositeOperation = "destination-out";
-    for (const e of it.erase) applyErase(x, e, 1, it.ox, it.oy);
+    applyErases(x, it, 1, it.ox, it.oy);
     it.bmp = c; it.alpha = alphaOf(c);
     return;
   }
@@ -253,7 +284,7 @@ function bake(it) {                            // base bitmap (restyled: barbs) 
   const c = canvas(it.w, it.h), x = ctx2d(c);
   x.drawImage(it.base, 0, 0);
   x.globalCompositeOperation = "destination-out";
-  for (const e of it.erase) applyErase(x, e, 1, it.ox, it.oy);
+  applyErases(x, it, 1, it.ox, it.oy);
   it.bmp = c;
   it.alpha = alphaOf(c);
 }
@@ -977,7 +1008,13 @@ function endDrag() {
     else { rerender(it); sel = new Set([it.id]); }
   }
   if (d.mode === "eraser") {
-    for (const [it, t] of d.touched) t.taper ? bake(it) : it.alpha = alphaOf(it.bmp);   // tapered: the ends narrow on release
+    let split = 0;
+    for (const [it, t] of d.touched) {
+      t.taper ? bake(it) : it.alpha = alphaOf(it.bmp);   // tapered: the ends narrow on release
+      const ps = splitPieces(it);
+      if (ps.length > 1) { split += ps.length; if (sel.has(it.id)) for (const p of ps) sel.add(p.id); }
+    }
+    if (split) status(`Split into ${split} separate strokes`);
     if (d.kill.size) { items = items.filter(i => !d.kill.has(i.id)); sel.clear(); status(`Deleted ${d.kill.size} stroke${d.kill.size > 1 ? "s" : ""}`); }
     if (!d.touched.size && !d.kill.size) undoStack.pop();
   }
@@ -1867,13 +1904,13 @@ vp.addEventListener("drop", e => {
 
 // ---------------------------------------------------------------- drafts (game strokes by reference, vectors by settings)
 const serializeState = s => ({v: 1, fields: s.fields, groups: s.groups, items: s.items.filter(i => i !== temp).map(it => ({
-  type: it.type, name: it.name, icon: it.icon, label: it.label, vec: it.vec, m: it.m, erase: it.erase, second: it.second,
+  type: it.type, name: it.name, icon: it.icon, label: it.label, vec: it.vec, m: it.m, erase: it.erase, keep: it.keep, second: it.second,
   hidden: it.hidden, locked: it.locked, g: it.g, barbs: it.type === "game" ? it.barbs : undefined, barbSeed: it.type === "game" ? it.barbSeed : undefined}))});
 const serialize = () => serializeState(saveState());
 async function itemsOf(doc) {                    // a saved drawing -> items (game strokes re-read from their icons)
   const out = [];
   for (const d of doc.items) {
-    const extra = {name: d.name, m: d.m, erase: d.erase || [], second: !!d.second, hidden: !!d.hidden, locked: !!d.locked, ...(d.g ? {g: d.g} : {}),
+    const extra = {name: d.name, m: d.m, erase: d.erase || [], ...(d.keep ? {keep: d.keep} : {}), second: !!d.second, hidden: !!d.hidden, locked: !!d.locked, ...(d.g ? {g: d.g} : {}),
                    ...(d.barbs != null ? {barbs: d.barbs, barbSeed: d.barbSeed} : {})};
     if (d.type === "game") { const {S} = await strokesOf(d.icon).catch(() => ({S: new Map()})); if (S.has(d.label)) out.push(gameItem(d.icon, S.get(d.label), extra)); }
     else out.push(vecItem(d.vec, extra));
@@ -2163,7 +2200,7 @@ function flatten(size) {                       // the drawing at size px: vector
     if (it.type === "vec") {
       const s = k * scaleOf(it.m), r = Brush.render(it.vec, s);
       bmp = r.canvas;
-      if (it.erase.length) { const x = ctx2d(bmp); x.globalCompositeOperation = "destination-out"; for (const e of it.erase) applyErase(x, e, s, r.x0, r.y0); }
+      if (it.erase.length) { const x = ctx2d(bmp); x.globalCompositeOperation = "destination-out"; applyErases(x, it, s, r.x0, r.y0); }
       M = mul([k, 0, 0, k, 0, 0], mul(it.m, [1 / s, 0, 0, 1 / s, r.x0 / s, r.y0 / s]));
     } else {
       M = mul([k, 0, 0, k, 0, 0], effM(it));
