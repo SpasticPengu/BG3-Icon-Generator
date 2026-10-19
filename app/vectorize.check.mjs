@@ -1,6 +1,6 @@
 // node app/vectorize.check.mjs: vectorize() on drawn shapes (no browser needed; the page's "To vector strokes" also
 // checks each result against the bitmap with match()).
-import {vectorize, match, barbDensity} from "./vectorize.js";
+import {vectorize, match, barbDensity, taperCut} from "./vectorize.js";
 
 function draw(w, h, f) { const a = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (f(x, y)) a[y * w + x] = 255; return a; }
 const seg = (x, y, ax, ay, bx, by, r) => { const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
@@ -28,4 +28,12 @@ ok(match(a, 0, 0, 50, 50, [{alpha: b, x0: 0, y0: 0, w: 50, h: 50}]) > .95, "matc
 const spikes = (x, y) => seg(x, y, 10, 40, 210, 40, 6) || [30, 60, 90, 120, 150, 180].some(c => seg(x, y, c, 33, c + 6, 25, 1.6));
 const plain = barbDensity(draw(220, 80, (x, y) => seg(x, y, 10, 40, 210, 40, 6)), 220, 80), thorny = barbDensity(draw(220, 80, spikes), 220, 80);
 ok(plain < .6 && thorny > 2, `barbs per 100 px: a plain line ${plain.toFixed(2)} (~0), six spikes on 200 px ${thorny.toFixed(2)} (~3)`);
-console.log("vectorize check passed: line, cross (2 marks), dot (dab), ring (closed), a cut ring (open), crescent (closed, corners at the tips), match tolerance, barb measure");
+// tapered eraser: a 13 px bar cut by a disc narrows to ~.32 of its width at the cut and is whole 3 widths away; a bar
+// that only passes near the eraser keeps its width
+const bars = (x, y) => seg(x, y, 10, 20, 190, 20, 6) || seg(x, y, 10, 45, 190, 45, 6), hole = (x, y) => Math.hypot(x - 100, y - 20) <= 8;
+const tb = draw(200, 60, bars), ta = draw(200, 60, (x, y) => bars(x, y) && !hole(x, y)), tf = taperCut(tb, ta, 200, 60);
+const wide = (x, y0, y1) => { let c = 0; for (let y = y0; y < y1; y++) if (ta[y * 200 + x] * tf[y * 200 + x] >= 128) c++; return c; };
+const [atCut, mid, far, other] = [wide(91, 0, 33), wide(72, 0, 33), wide(50, 0, 33), Math.min(...[60, 80, 91, 100, 120].map(x => wide(x, 33, 60)))];
+ok(atCut >= 3 && atCut <= 6 && mid > atCut && mid < 13 && far === 13 && other === 13,
+   `tapered cut: width 13 bar -> ${atCut} at the cut (~4), ${mid} halfway (~10), ${far} 3 widths away (13); the uncut bar ${other} (13)`);
+console.log("vectorize check passed: line, cross (2 marks), dot (dab), ring (closed), a cut ring (open), crescent (closed, corners at the tips), match tolerance, barb measure, tapered cut");

@@ -318,4 +318,48 @@ export function match(a, ax, ay, aw, ah, bs) {
   for (let i = 0; i < W * H; i++) if (A[i] || B[i]) { uni++; if ((A[i] && Bg[i]) || (B[i] && Ag[i])) inter++; }
   return uni ? inter / uni : 0;
 }
+// The tapered eraser (user 2026-10-19: "the part(s) that remain have a proper end / taper"): what a cut leaves narrows
+// towards the cut like a brush stroke's end (brush.js: width × tip + (1 - tip)·(d / len widths)^pow). before / after:
+// the stroke's alpha (0-255) before and after the eraser -> a factor (0-1) for after's alpha. d is the distance along
+// the stroke from the cut (geodesic within the stroke: a stroke that only passes near the eraser keeps its width);
+// widths come from the stroke before the cut (its sides, not the cut face).
+export function taperCut(before, after, w, h, tip = .32, len = 3, pow = .7) {
+  const n = w * h, mb = new Uint8Array(n), out = new Float32Array(n).fill(1);
+  for (let i = 0; i < n; i++) mb[i] = before[i] >= 128 ? 1 : 0;
+  const e = chamfer(mb, w, h, false);           // distance to the stroke's own sides (the bitmap's edge isn't a side)
+  let top = 0;
+  for (let i = 0; i < n; i++) if (mb[i]) top = Math.max(top, e[i]);
+  // half-width: the largest side distance nearby, so an edge pixel knows the width of the stroke it lies on
+  const R = Math.max(1, Math.ceil(top)), H = new Float32Array(n), t = new Float32Array(n);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let m = 0; for (let k = Math.max(0, x - R); k <= Math.min(w - 1, x + R); k++) m = Math.max(m, e[y * w + k]); t[y * w + x] = m; }
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) { let m = 0; for (let k = Math.max(0, y - R); k <= Math.min(h - 1, y + R); k++) m = Math.max(m, t[k * w + x]); H[y * w + x] = m; }
+  // distance along the stroke from the cut: Dijkstra (1, √2 steps) through what is left, from the pixels next to the cut
+  const D = new Float64Array(n).fill(Infinity), heap = [], far = len * 2 * top;   // 64-bit: the heap compares in 64
+  const push = (d, i) => { heap.push([d, i]); let c = heap.length - 1; while (c) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+  const pop = () => { const r = heap[0], l = heap.pop(); if (heap.length) { heap[0] = l; let c = 0; for (;;) { const a = 2 * c + 1, b = a + 1; let s = c;
+    if (a < heap.length && heap[a][0] < heap[s][0]) s = a; if (b < heap.length && heap[b][0] < heap[s][0]) s = b; if (s === c) break; [heap[s], heap[c]] = [heap[c], heap[s]]; c = s; } } return r; };
+  const left = i => after[i] >= 128, cut = i => mb[i] && !left(i);
+  for (let i = 0; i < n; i++) {
+    if (!left(i)) continue;
+    const x = i % w, y = (i / w) | 0;
+    for (const [dx, dy] of OFF) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h && cut(Y * w + X)) { D[i] = 0; push(0, i); break; } }
+  }
+  while (heap.length) {
+    const [d, i] = pop();
+    if (d > D[i] || d > far) continue;
+    const x = i % w, y = (i / w) | 0;
+    for (const [dx, dy] of OFF) {
+      const X = x + dx, Y = y + dy, j = Y * w + X, nd = d + (dx && dy ? Math.SQRT2 : 1);
+      if (X >= 0 && Y >= 0 && X < w && Y < h && after[j] > 0 && nd < D[j]) { D[j] = nd; push(nd, j); }
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    if (D[i] === Infinity || !H[i]) continue;
+    const tl = len * 2 * H[i];
+    if (D[i] >= tl) continue;
+    const f = tip + (1 - tip) * Math.pow(D[i] / tl, pow);
+    out[i] = Math.max(0, Math.min(1, e[i] - H[i] * (1 - f) + .5));   // keep what lies within f × the half-width of the centre
+  }
+  return out;
+}
 export const _internal = {thin, spare, chamfer, graph, cross};   // for offline tests

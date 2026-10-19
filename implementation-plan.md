@@ -1854,6 +1854,22 @@ Visual check sheets for any icon list: `python -m iconkit.sheet OUT.png ICON... 
 
 ## Status log (newest first)
 
+- 2026-10-19: eraser modes (user: simple, stroke, and one that leaves proper tapered ends): Pixels and Whole strokes
+  existed; new **Tapered**: the parts a cut leaves narrow to the cut like a brush end (tip .32 of the width over 3
+  widths, power .7, the brush's own numbers). `vectorize.taperCut` (geodesic distance from the cut through what is
+  left, so a stroke passing near the eraser keeps its width; widths from the stroke before the cut), stored as
+  `taper: true` on the erase stroke, applied in bake and export (`applyErase`). Node check: a 13 px bar cut by a disc
+  is 3-6 px at the cut, wider halfway, 13 px 3 widths away, the uncut neighbour bar 13 px. In the page: brush strokes
+  and a game icon (AoEDamageOnJump) cut with both modes; release ~40 ms. A Float32 distance array compared with the
+  heap's 64-bit keys skipped live entries (holes in the taper): Float64.
+- 2026-10-19: document tab close and colour-stop remove buttons use the same drawn cross as the search clear (user):
+  one shared rule (`.dtab .x, .cdstop .x, .sbox .x`), the unsaved dot is an 8 px circle in its place. Measured: every
+  cross centred on its button, the stops' crosses on their swatches' midline.
+- 2026-10-19: search clear button off centre (user): the x character sits on the font baseline. Now a drawn cross
+  (`#i-x`), flex-centred in a button centred on the input (top 50%); measured: cross, button and input middles equal on both tabs.
+- 2026-10-19: library search bars (Icons, Shapes) get a clear button (user): shared `searchBox()`, the x shows only with
+  text (`:placeholder-shown`), Esc clears too (Firefox draws no clear button for type=search). Tested in the page: both tabs filter and come back to all.
+- 2026-10-19: **v0.7.5 published** (user): `main` = 3c86673, tag v0.7.5, workflow passed, notes set (the cache fix).
 - 2026-10-19: user saw raw markdown in 0.7.3's Update dialog: the page ran a cached 0.7.2 editor.js. The stdlib file
   server answers 304 for any file not newer than the browser's copy; Explorer keeps the zip's build dates when
   unzipping, older than the 0.7.2 files the browser cached at the same address. `Handler.send_head` now answers 304

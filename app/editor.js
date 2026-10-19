@@ -4,7 +4,7 @@
 // game's single drawing) and repaints it on the GPU (glow.js); the PC hotbar cell and the export go through Python.
 import {Painter} from "./glow.js";
 import * as Brush from "./brush.js";
-import {vectorize, match, barbDensity, barbs} from "./vectorize.js";
+import {vectorize, match, barbDensity, barbs, taperCut} from "./vectorize.js";
 
 const N = 512, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -225,6 +225,18 @@ function eraseStroke(x, e, k, ox, oy) {        // an eraser stroke (local px) on
   e.pts.forEach(([px, py], i) => i ? x.lineTo(px * k - ox, py * k - oy) : x.moveTo(px * k - ox, py * k - oy));
   x.stroke();
 }
+// one eraser stroke on x (destination-out already set). A tapered one (eraser mode "Tapered", user 2026-10-19) also
+// narrows what it leaves towards the cut, like a brush stroke's end (vectorize.taperCut, on x's whole canvas)
+function applyErase(x, e, k, ox, oy) {
+  if (!e.taper) return eraseStroke(x, e, k, ox, oy);
+  const {width: w, height: h} = x.canvas, before = x.getImageData(0, 0, w, h).data;
+  eraseStroke(x, e, k, ox, oy);
+  const img = x.getImageData(0, 0, w, h), d = img.data, B = new Uint8Array(w * h), A = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) { B[i] = before[i * 4 + 3]; A[i] = d[i * 4 + 3]; }
+  const f = taperCut(B, A, w, h);
+  for (let i = 0; i < w * h; i++) if (f[i] < 1) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * f[i]);
+  x.putImageData(img, 0, 0);
+}
 function bake(it) {                            // base bitmap (restyled: barbs) minus the eraser strokes -> bmp + alpha (for picking)
   if (it.type === "game") {                     // a game stroke's barbs changed: its bitmap grows by the barbs' reach
     const r = it.barbs != null ? restyled(it) : {canvas: it.base, alpha: it.baseAlpha, pad: 0};
@@ -233,7 +245,7 @@ function bake(it) {                            // base bitmap (restyled: barbs) 
     const c = canvas(it.w, it.h), x = ctx2d(c);
     x.drawImage(r.canvas, 0, 0);
     x.globalCompositeOperation = "destination-out";
-    for (const e of it.erase) eraseStroke(x, e, 1, it.ox, it.oy);
+    for (const e of it.erase) applyErase(x, e, 1, it.ox, it.oy);
     it.bmp = c; it.alpha = alphaOf(c);
     return;
   }
@@ -241,7 +253,7 @@ function bake(it) {                            // base bitmap (restyled: barbs) 
   const c = canvas(it.w, it.h), x = ctx2d(c);
   x.drawImage(it.base, 0, 0);
   x.globalCompositeOperation = "destination-out";
-  for (const e of it.erase) eraseStroke(x, e, 1, it.ox, it.oy);
+  for (const e of it.erase) applyErase(x, e, 1, it.ox, it.oy);
   it.bmp = c;
   it.alpha = alphaOf(c);
 }
@@ -965,7 +977,7 @@ function endDrag() {
     else { rerender(it); sel = new Set([it.id]); }
   }
   if (d.mode === "eraser") {
-    for (const it of d.touched.keys()) it.alpha = alphaOf(it.bmp);
+    for (const [it, t] of d.touched) t.taper ? bake(it) : it.alpha = alphaOf(it.bmp);   // tapered: the ends narrow on release
     if (d.kill.size) { items = items.filter(i => !d.kill.has(i.id)); sel.clear(); status(`Deleted ${d.kill.size} stroke${d.kill.size > 1 ? "s" : ""}`); }
     if (!d.touched.size && !d.kill.size) undoStack.pop();
   }
@@ -995,7 +1007,7 @@ function eraseAt(a, b) {                       // eraser segment a -> b: pixels 
     const inv = invert(it.m), la = apply(inv, ...a), lb = apply(inv, ...b), w = ST.eraser / scaleOf(it.m);
     let t = drag.touched.get(it);
     if (!t) {                                 // copy-on-write: the undo snapshot keeps the old bitmap
-      t = {pts: [la], w};
+      t = {pts: [la], w, ...(ST.eraseMode === "taper" ? {taper: true} : {})};
       it.erase = [...it.erase, t];
       const c = canvas(it.w, it.h); ctx2d(c).drawImage(it.bmp, 0, 0); it.bmp = c;
       drag.touched.set(it, t);
@@ -1155,6 +1167,7 @@ function refreshOpts() {
   } else if (tool === "eraser") {
     h = slider("eraser", ST.eraser) + `<span class="sep"></span><div class="seg" role="group" aria-label="Eraser mode">
       <button class="btn" data-mode="pixels" aria-pressed="${ST.eraseMode === "pixels"}" title="Erase where you drag">Pixels</button>
+      <button class="btn" data-mode="taper" aria-pressed="${ST.eraseMode === "taper"}" title="Erase where you drag. The cut ends narrow to a point, like the ends of a brush stroke">Tapered</button>
       <button class="btn" data-mode="strokes" aria-pressed="${ST.eraseMode === "strokes"}" title="Delete each stroke you touch">Whole strokes</button></div>
       `;
   } else if (tool === "hand") h = '<span class="hint">Drag to pan · Ctrl+wheel zooms · Ctrl+0 fits</span>';
@@ -1512,7 +1525,7 @@ for (const id of ["colour", "second"]) {
 const CD = {target: "colour", was: "", stops: ["#3fb8ff"], timer: 0, seq: 0};
 function cdRender() {
   $("#cdStops").innerHTML = CD.stops.map((s, i) => `<span class="cdstop"><input type="color" value="${s}" data-i="${i}" aria-label="Colour ${i + 1}">` +
-    (CD.stops.length > 1 ? `<button class="x" data-del="${i}" aria-label="Remove colour ${i + 1}" title="Remove">×</button>` : "") + `</span>`).join("") +
+    (CD.stops.length > 1 ? `<button class="x" data-del="${i}" aria-label="Remove colour ${i + 1}" title="Remove"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>` : "") + `</span>`).join("") +
     (CD.stops.length < 4 ? `<button class="btn" id="cdAdd" title="Add a colour (up to 4). They are ordered from dark to bright">+ Colour</button>` : "");
   $("#cdHow").textContent = CD.stops.length === 1 ? "One colour: lines stay bright and the glow takes this colour."
     : "Gradient: colours from dark to bright. Each part of the icon takes the colour of its brightness.";
@@ -1641,17 +1654,26 @@ const chips = (label, opts, cur) => `<div class="fchips" role="group" aria-label
   `<button class="fchip" data-v="${esc(v)}" aria-pressed="${v === cur}" title="${esc(name)} (${n})">${esc(SHORT[name] || name)}<span>${n}</span></button>`).join("")}</div>`;
 const partText = c => `${catOf(c)} ${c.sym || ""} ${c.icon} ${BYNAME[c.icon]?.t || ""} ${(c.from || []).join(" ")}`.toLowerCase();
 const words = id => ($(id)?.value || "").toLowerCase().split(/\s+/).filter(Boolean);
+// a library search bar with a clear button (user 2026-10-19; Firefox draws none for type=search); Esc clears too
+const searchBox = (id, placeholder, label) => `<div class="sbox"><input id="${id}" type="text" placeholder="${placeholder}" aria-label="${label}"
+  value="${esc(store.get(id, ""))}"><button class="x" type="button" tabindex="-1" aria-label="Clear search" title="Clear search (Esc)"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>`;
+function clearSearch(inp) {
+  if (!inp.value) return false;
+  inp.value = "";
+  inp.dispatchEvent(new Event("input"));
+  return true;
+}
 function libTools() {
   const t = $("#libTools");
   if (tab === "icons") {
     const n = k => ICONS.filter(e => !k || e.k === k).length;
-    t.innerHTML = `<input id="search" type="text" style="width:100%" placeholder="Search game icons" aria-label="Search game icons" value="${esc(store.get("search", ""))}">` +
+    t.innerHTML = searchBox("search", "Search game icons", "Search game icons") +
       chips("Kind", [["", "All", n("")], ["Spell", "Spells", n("Spell")], ["Action", "Actions", n("Action")], ["Illithid", "Illithid", n("Illithid")], ["Symbol", "Symbols", n("Symbol")]], kindF);
   } else if (tab === "parts") {                // categories (eye-checked, editable by right-click); sections in "All"
     const vis = PARTS.filter(c => showHidden || !HIDDEN[c.key]), count = k => vis.filter(c => catOf(c) === k).length;
     const cats = [...CAT_ORDER, "Other"].filter(count);
     if (partCat !== "All" && !cats.includes(partCat)) partCat = "All";
-    t.innerHTML = `<input id="psearch" type="text" style="width:100%" placeholder="Search shapes: glyph, fireball…" aria-label="Search shapes by category or game icon" value="${esc(store.get("psearch", ""))}">` +
+    t.innerHTML = searchBox("psearch", "Search shapes: glyph, fireball…", "Search shapes by category or game icon") +
       chips("Category", [["All", "All", vis.length], ...cats.map(k => [k, k, count(k)])], partCat) +
       `<label class="muted" style="display:block;margin-top:6px"><input type="checkbox" id="showHidden" ${showHidden ? "checked" : ""}> Show hidden shapes (${PARTS.filter(c => HIDDEN[c.key]).length})</label>`;
   }
@@ -1669,6 +1691,11 @@ function libTools() {
   $("#impVec")?.addEventListener("change", e => store.set("impVec", e.target.checked));
   $("#search")?.addEventListener("input", e => { store.set("search", e.target.value); fillGrid(); });
   $("#psearch")?.addEventListener("input", e => { store.set("psearch", e.target.value); fillGrid(); });
+  for (const b of $$(".sbox", t)) {
+    const inp = $("input", b);
+    $(".x", b).onclick = () => { clearSearch(inp); inp.focus(); };
+    inp.addEventListener("keydown", e => { if (e.key === "Escape" && clearSearch(inp)) e.stopPropagation(); });
+  }
   $("#showHidden")?.addEventListener("change", e => { showHidden = e.target.checked; libTools(); fillGrid(); });
   for (const b of $$(".fchip", t)) b.onclick = () => {
     const v = b.dataset.v;
@@ -2032,7 +2059,7 @@ function refreshDocTabs() {
     return `<div class="dtab${u ? " unsaved" : ""}${tabPick.has(i) ? " picked" : ""}" role="tab" draggable="true" data-i="${i}" tabindex="${i === cur ? 0 : -1}" aria-selected="${i === cur}" ` +
       `title="${esc(name)}&#10;${n} stroke${n === 1 ? "" : "s"}${u ? " · unsaved changes" : ""}&#10;Double-click: rename · Ctrl-click: select several · right-click: more">` +
       `<span class="dd" style="${c && PR[c] ? `background:${glowDot(c)}` : ""}"></span><span class="t">${esc(name)}</span>` +
-      `<button class="x" data-close="${i}" tabindex="-1" aria-label="Close ${esc(name)}${u ? " (unsaved)" : ""}" title="Close (Ctrl+Alt+W)${u ? ": unsaved changes" : ""}">×</button></div>`;
+      `<button class="x" data-close="${i}" tabindex="-1" aria-label="Close ${esc(name)}${u ? " (unsaved)" : ""}" title="Close (Ctrl+Alt+W)${u ? ": unsaved changes" : ""}"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>`;
   }).join("") + `<button class="dnew" id="docNew" title="New tab (Ctrl+Alt+N)" aria-label="New tab">+</button>`;
 }
 $("#docTabs").addEventListener("click", e => {
@@ -2136,7 +2163,7 @@ function flatten(size) {                       // the drawing at size px: vector
     if (it.type === "vec") {
       const s = k * scaleOf(it.m), r = Brush.render(it.vec, s);
       bmp = r.canvas;
-      if (it.erase.length) { const x = ctx2d(bmp); x.globalCompositeOperation = "destination-out"; for (const e of it.erase) eraseStroke(x, e, s, r.x0, r.y0); }
+      if (it.erase.length) { const x = ctx2d(bmp); x.globalCompositeOperation = "destination-out"; for (const e of it.erase) applyErase(x, e, s, r.x0, r.y0); }
       M = mul([k, 0, 0, k, 0, 0], mul(it.m, [1 / s, 0, 0, 1 / s, r.x0 / s, r.y0 / s]));
     } else {
       M = mul([k, 0, 0, k, 0, 0], effM(it));

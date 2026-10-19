@@ -146,6 +146,10 @@ down): PC-only effects (centre light, frames) stay in the hotbar recipe, never i
   nearest game preset). Import = `import_req` (faded tooltips: strokes rebuilt from the colour channels, `unfade`;
   colour = nearest game gradient or one fitted on the icon, `own_colour`) into `outputs/editor/imported/`; the "Name in
   the game" field is the export key. Bitmap → vector strokes: `app/vectorize.js` (check: `node app/vectorize.check.mjs`).
+  Eraser modes: Pixels | Tapered | Whole strokes. Erase strokes live in `it.erase` (non-destructive, `{pts, w, taper?}`)
+  and every path that applies them goes through `applyErase` (bake + export): a tapered one narrows what is left
+  towards the cut with the brush's own end profile (`vectorize.taperCut`: geodesic distance from the cut, widths from
+  the stroke before the cut); the drag shows a plain cut, the taper appears on release.
   Barbs (thorny edges): `research/probes/barbs.py` measures them (opening by a .4-width disc; spells 3.1 per 100 px,
   actions 1.0); `vectorize.barbDensity` is the same measure in the page (exact EDT; keep it agreeing with the probe).
   Brush `v.barbs` is calibrated to that measure (`BARB_CAL`, on closed circles; /?brushtest prints `barb_density`);
